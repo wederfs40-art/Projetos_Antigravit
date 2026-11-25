@@ -12,136 +12,66 @@ namespace IPSCSimulator.Setup
     using IPSCSimulator.Weapons;
 
     /// <summary>
-    /// Construtor de cena avançado: gera o estande de tiro IPSC de alta fidelidade visual,
-    /// iluminação cinematográfica solar, chão de cascalho texturizado, barris táticos,
-    /// biombos de madeira, bancada de municiamento com estojos e caixas de munição,
-    /// alvos de papelão oficial, alvos metálicos reativos (Poppers) e pistola 3D detalhada.
+    /// Gerador de mundos e cenários 3D: constrói proceduralmente múltiplos ambientes:
+    /// 1. Pistas de IPSC Esportivo (Curta, Média e Longa)
+    /// 2. Estande Indoor de Precisão com Cabines e Alvos a 10m/25m
+    /// 3. Armazém Tático Urbano / Killhouse estilo Counter-Strike com Contêineres e CQB
+    /// Também equipa o jogador com o arsenal escolhido (Pistola 9mm, Dan Wesson .357 e SMG).
     /// </summary>
     public static class SceneGeneratorCore
     {
         public static void GenerateCompleteShootingRange()
         {
-            Debug.Log("[IPSC Setup] Iniciando montagem do estande de tiro de alta fidelidade...");
+            BuildSelectedEnvironment(GameEnvironmentType.IPSC_Outdoor_Short, SelectedWeaponType.Pistol_9mm);
+        }
 
-            // 1. Remove versão anterior se já existir na cena para evitar duplicatas
+        public static void BuildSelectedEnvironment(GameEnvironmentType envType, SelectedWeaponType weaponType)
+        {
+            Debug.Log($"[SceneGenerator] Construindo ambiente '{envType}' com armamento '{weaponType}'...");
+
+            // 1. Limpeza de ambiente anterior
             GameObject oldRoot = GameObject.Find("--- IPSC SHOOTING RANGE ---");
-            if (oldRoot != null)
-            {
-                Object.DestroyImmediate(oldRoot);
-            }
+            if (oldRoot != null) Object.DestroyImmediate(oldRoot);
 
             GameObject root = new GameObject("--- IPSC SHOOTING RANGE ---");
 
-            // 2. Configuração de Iluminação Fotorealista
-            SetupRealisticLighting();
+            // 2. Garante o Gerenciador Central e Menus
+            EnsureManagers(root);
 
-            // 3. Criação dos Materiais PBR
-            // Chão de Cascalho e Areia
-            Material matGround = ProceduralMaterials.CreateMaterial(new Color(0.48f, 0.43f, 0.36f), "Mat_Gravel_PBR", 0.15f, 0.05f);
-            Texture2D gravelTex = ProceduralMaterials.CreateGravelTexture();
-            matGround.mainTexture = gravelTex;
-            matGround.mainTextureScale = new Vector2(10f, 18f);
-
-            // Madeira de Pinus para Biombos e Paredes
-            Material matWood = ProceduralMaterials.CreateMaterial(new Color(0.65f, 0.50f, 0.33f), "Mat_Wood_Planks", 0.25f, 0.0f);
-            Texture2D woodTex = ProceduralMaterials.CreateWoodPlankTexture();
-            matWood.mainTexture = woodTex;
-            matWood.mainTextureScale = new Vector2(2f, 8f);
-
-            // Para-balas de Terra
-            Material matBerm = ProceduralMaterials.CreateMaterial(new Color(0.32f, 0.22f, 0.15f), "Mat_EarthBerm", 0.05f, 0.0f);
-            matBerm.mainTexture = gravelTex;
-            matBerm.mainTextureScale = new Vector2(6f, 4f);
-
-            // Faixas de Advertência (Fault Lines)
-            Material matHazard = ProceduralMaterials.CreateMaterial(Color.white, "Mat_HazardStripes", 0.3f, 0.0f);
-            Texture2D hazardTex = ProceduralMaterials.CreateWarningStripeTexture();
-            matHazard.mainTexture = hazardTex;
-            matHazard.mainTextureScale = new Vector2(1f, 8f);
-
-            // Barris Industriais
-            Material matBarrelBlue = ProceduralMaterials.CreateMaterial(new Color(0.12f, 0.35f, 0.75f), "Mat_BarrelBlue", 0.55f, 0.45f);
-            matBarrelBlue.mainTexture = ProceduralMaterials.CreateBarrelTexture(new Color(0.12f, 0.35f, 0.75f));
-
-            Material matBarrelYellow = ProceduralMaterials.CreateMaterial(new Color(0.85f, 0.70f, 0.12f), "Mat_BarrelYellow", 0.55f, 0.45f);
-            matBarrelYellow.mainTexture = ProceduralMaterials.CreateBarrelTexture(new Color(0.85f, 0.70f, 0.12f));
-
-            // Metal de Armas e Munições
-            Material matGunMetal = ProceduralMaterials.CreateMaterial(new Color(0.10f, 0.10f, 0.11f), "Mat_GunBlack", 0.6f, 0.7f);
-            Material matGunSlide = ProceduralMaterials.CreateMaterial(new Color(0.18f, 0.18f, 0.20f), "Mat_GunSlide", 0.75f, 0.85f);
-            Material matBrass = ProceduralMaterials.CreateMaterial(new Color(0.92f, 0.78f, 0.32f), "Mat_BrassGold", 0.85f, 0.95f);
-            Material matSightFiber = ProceduralMaterials.CreateEmissiveMaterial(new Color(1f, 0.1f, 0.05f), "Mat_FiberOpticGlow", 2.0f);
-
-            // Chapa de Aço para Alvos Poppers
-            Material matSteelPopper = ProceduralMaterials.CreateMaterial(new Color(0.90f, 0.90f, 0.92f), "Mat_SteelPlate", 0.5f, 0.65f);
-
-            // 4. Cenografia do Estande
-            GameObject envObj = new GameObject("Environment_ShootingRange");
-            envObj.transform.SetParent(root.transform);
-
-            // Chão
-            GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            ground.name = "Ground_Gravel";
-            ground.transform.SetParent(envObj.transform);
-            ground.transform.position = new Vector3(0, -0.25f, 12f);
-            ground.transform.localScale = new Vector3(20f, 0.5f, 32f);
-            ground.GetComponent<MeshRenderer>().material = matGround;
-
-            // Para-balas de fundo (Berm imponente)
-            GameObject berm = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            berm.name = "Backstop_Berm";
-            berm.transform.SetParent(envObj.transform);
-            berm.transform.position = new Vector3(0, 2.8f, 26f);
-            berm.transform.localScale = new Vector3(22f, 6f, 5f);
-            berm.GetComponent<MeshRenderer>().material = matBerm;
-
-            // Barreiras laterais de contenção
-            CreateWall(envObj.transform, new Vector3(-9.5f, 1.8f, 12f), new Vector3(1f, 4f, 32f), matWood);
-            CreateWall(envObj.transform, new Vector3(9.5f, 1.8f, 12f), new Vector3(1f, 4f, 32f), matWood);
-
-            // Shooting Box com faixas de advertência
-            CreateShootingBox(envObj.transform, Vector3.zero, matHazard);
-
-            // Barris Táticos (55-gallon drums)
-            CreateBarrel(envObj.transform, new Vector3(-1.8f, 0.45f, 3.5f), matBarrelBlue);
-            CreateBarrel(envObj.transform, new Vector3(-1.8f, 1.35f, 3.5f), matBarrelBlue); // Barril empilhado
-            CreateBarrel(envObj.transform, new Vector3(-2.4f, 0.45f, 3.8f), matBarrelYellow);
-
-            CreateBarrel(envObj.transform, new Vector3(2.0f, 0.45f, 5.0f), matBarrelYellow);
-            CreateBarrel(envObj.transform, new Vector3(2.6f, 0.45f, 5.3f), matBarrelBlue);
-
-            // Biombos de Madeira com Passagem (Barricadas Táticas)
-            CreateBarricade(envObj.transform, new Vector3(-3.2f, 1.1f, 8f), new Vector3(2.5f, 2.2f, 0.1f), matWood);
-            CreateBarricade(envObj.transform, new Vector3(3.2f, 1.1f, 10f), new Vector3(2.5f, 2.2f, 0.1f), matWood);
-
-            // Mesa de Municiamento (Safety Bench) lateral
-            CreateShootingBench(envObj.transform, new Vector3(-3.2f, 0f, 0.5f), matWood, matBrass);
-
-            // 5. Criação do Prefab de Decalque (Furo de Bala)
+            // 3. Criação de Prefabs Base (Furo de Bala e Projétil)
             GameObject decalPrefab = CreateBulletHoleDecalObject();
             decalPrefab.transform.SetParent(root.transform);
             decalPrefab.SetActive(false);
 
-            // 6. Criação do Projétil
             GameObject bulletPrefab = CreateBulletPrefab(decalPrefab);
             bulletPrefab.transform.SetParent(root.transform);
             bulletPrefab.SetActive(false);
 
-            // 7. Alvos Oficiais IPSC (Papelão)
+            // 4. Constrói o Cenário Específico
             List<IPSCTarget> targetsList = new List<IPSCTarget>();
-            targetsList.Add(CreateIPSCTarget(root.transform, "Target_01 (7m)", new Vector3(0f, 1.4f, 7f), false, matWood));
-            targetsList.Add(CreateIPSCTarget(root.transform, "Target_02 (12m)", new Vector3(-4.0f, 1.4f, 12f), false, matWood));
-            targetsList.Add(CreateIPSCTarget(root.transform, "NoShoot_Penalty", new Vector3(-3.2f, 1.35f, 11.6f), true, matWood));
-            targetsList.Add(CreateIPSCTarget(root.transform, "Target_03 (16m)", new Vector3(3.8f, 1.4f, 16f), false, matWood));
+            switch (envType)
+            {
+                case GameEnvironmentType.IPSC_Outdoor_Short:
+                    BuildIPSCShort(root.transform, targetsList);
+                    break;
+                case GameEnvironmentType.IPSC_Outdoor_Medium:
+                    BuildIPSCMedium(root.transform, targetsList);
+                    break;
+                case GameEnvironmentType.IPSC_Outdoor_Long:
+                    BuildIPSCLong(root.transform, targetsList);
+                    break;
+                case GameEnvironmentType.Indoor_Precision_Stand:
+                    BuildIndoorStand(root.transform, targetsList);
+                    break;
+                case GameEnvironmentType.Tactical_CS_Killhouse:
+                    BuildCSKillhouse(root.transform, targetsList);
+                    break;
+            }
 
-            // 8. Alvos Metálicos Reativos (Steel Poppers / Plates)
-            CreateSteelPopper(root.transform, "Steel_Popper_Left (9m)", new Vector3(-1.8f, 0f, 9.5f), matSteelPopper);
-            CreateSteelPopper(root.transform, "Steel_Popper_Right (14m)", new Vector3(1.6f, 0f, 14.0f), matSteelPopper);
+            // 5. Instancia o Jogador e a Arma Selecionada
+            CreatePlayerWithWeapon(root.transform, bulletPrefab, decalPrefab, weaponType);
 
-            // 9. Jogador e Pistola 3D Detalhada com Fibra Ótica
-            GameObject player = CreatePlayerWithDetailedWeapon(root.transform, bulletPrefab, decalPrefab, matGunMetal, matGunSlide, matSightFiber, matBrass);
-
-            // 10. Range Officer Timer
+            // 6. Range Officer Timer
             GameObject roObj = new GameObject("RangeOfficer_Timer");
             roObj.transform.SetParent(root.transform);
             AudioSource roAudio = roObj.AddComponent<AudioSource>();
@@ -152,17 +82,617 @@ namespace IPSCSimulator.Setup
             SetFieldValue(timer, "beepSound", ProceduralAudio.CreateTimerBeepClip());
             SetFieldValue(timer, "stageTargets", targetsList);
 
-            // 11. HUD Manager
+            // 7. In-Game HUD Manager
             GameObject hudObj = new GameObject("IPSC_HUD_Manager");
             hudObj.transform.SetParent(root.transform);
             hudObj.AddComponent<IPSCUIManager>();
-
-            Debug.Log("[IPSC Setup] Estande de alta fidelidade montado com sucesso!");
         }
 
-        private static void SetupRealisticLighting()
+        private static void EnsureManagers(GameObject root)
         {
-            // Luz Solar Direcional com Sombras Suaves
+            if (TacticalGameManager.Instance == null)
+            {
+                GameObject gmObj = new GameObject("TacticalGameManager");
+                gmObj.AddComponent<TacticalGameManager>();
+            }
+
+            if (Object.FindAnyObjectByType<MainMenuManager>() == null)
+            {
+                GameObject menuObj = new GameObject("MainMenu_UI");
+                menuObj.transform.SetParent(root.transform);
+                menuObj.AddComponent<MainMenuManager>();
+            }
+        }
+
+        // =========================================================================
+        // CENÁRIO 1: PISTA CURTA IPSC (SPEED OPTION)
+        // =========================================================================
+        private static void BuildIPSCShort(Transform root, List<IPSCTarget> targets)
+        {
+            SetupSunLighting(true);
+
+            Material matGround = CreateGravelMaterial();
+            Material matWood = CreateWoodMaterial();
+            Material matBerm = CreateBermMaterial();
+            Material matHazard = CreateHazardMaterial();
+            Material matBarrelBlue = CreateBarrelMaterial(new Color(0.12f, 0.35f, 0.75f));
+            Material matBarrelYellow = CreateBarrelMaterial(new Color(0.85f, 0.70f, 0.12f));
+            Material matSteel = CreateSteelMaterial();
+
+            GameObject env = new GameObject("Environment_IPSC_Short");
+            env.transform.SetParent(root);
+
+            // Chão e Para-balas
+            CreateFloor(env.transform, new Vector3(0, -0.25f, 10f), new Vector3(18f, 0.5f, 26f), matGround);
+            CreateBerm(env.transform, new Vector3(0, 2.5f, 22f), new Vector3(20f, 5.5f, 4f), matBerm);
+            CreateWall(env.transform, new Vector3(-8.5f, 1.8f, 10f), new Vector3(1f, 4f, 26f), matWood);
+            CreateWall(env.transform, new Vector3(8.5f, 1.8f, 10f), new Vector3(1f, 4f, 26f), matWood);
+
+            // Shooting Box
+            CreateShootingBox(env.transform, Vector3.zero, matHazard);
+
+            // Barris táticos e Mesa de Apoio
+            CreateBarrel(env.transform, new Vector3(-1.8f, 0.45f, 3.5f), matBarrelBlue);
+            CreateBarrel(env.transform, new Vector3(-1.8f, 1.35f, 3.5f), matBarrelBlue);
+            CreateBarrel(env.transform, new Vector3(2.2f, 0.45f, 4.5f), matBarrelYellow);
+            CreateShootingBench(env.transform, new Vector3(-3f, 0, 0.5f), matWood);
+
+            // Alvos: 3 Papelão + 2 Poppers
+            targets.Add(CreateIPSCTarget(root, "Target_01 (7m)", new Vector3(0f, 1.4f, 7f), false, matWood));
+            targets.Add(CreateIPSCTarget(root, "Target_02 (11m)", new Vector3(-3.5f, 1.4f, 11f), false, matWood));
+            targets.Add(CreateIPSCTarget(root, "NoShoot_01", new Vector3(-2.8f, 1.35f, 10.6f), true, matWood));
+            targets.Add(CreateIPSCTarget(root, "Target_03 (15m)", new Vector3(3.2f, 1.4f, 15f), false, matWood));
+
+            CreateSteelPopper(root, "Popper_Left (9m)", new Vector3(-1.6f, 0, 9f), matSteel);
+            CreateSteelPopper(root, "Popper_Right (13m)", new Vector3(1.8f, 0, 13f), matSteel);
+        }
+
+        // =========================================================================
+        // CENÁRIO 2: PISTA MÉDIA IPSC (LABIRINTO TÁTICO COM BIOMBOS)
+        // =========================================================================
+        private static void BuildIPSCMedium(Transform root, List<IPSCTarget> targets)
+        {
+            SetupSunLighting(true);
+
+            Material matGround = CreateGravelMaterial();
+            Material matWood = CreateWoodMaterial();
+            Material matBerm = CreateBermMaterial();
+            Material matHazard = CreateHazardMaterial();
+            Material matBarrelBlue = CreateBarrelMaterial(new Color(0.12f, 0.35f, 0.75f));
+            Material matBarrelYellow = CreateBarrelMaterial(new Color(0.85f, 0.70f, 0.12f));
+            Material matSteel = CreateSteelMaterial();
+
+            GameObject env = new GameObject("Environment_IPSC_Medium");
+            env.transform.SetParent(root);
+
+            CreateFloor(env.transform, new Vector3(0, -0.25f, 14f), new Vector3(22f, 0.5f, 34f), matGround);
+            CreateBerm(env.transform, new Vector3(0, 3f, 30f), new Vector3(24f, 6f, 5f), matBerm);
+            CreateWall(env.transform, new Vector3(-10.5f, 2f, 14f), new Vector3(1f, 4f, 34f), matWood);
+            CreateWall(env.transform, new Vector3(10.5f, 2f, 14f), new Vector3(1f, 4f, 34f), matWood);
+
+            // Boxes de Tiro 1 e 2 (o atirador se desloca)
+            CreateShootingBox(env.transform, Vector3.zero, matHazard);
+            CreateShootingBox(env.transform, new Vector3(2.5f, 0, 6.5f), matHazard);
+
+            // Labirinto de Biombos de Madeira com Passagens
+            CreateBarricade(env.transform, new Vector3(-2.5f, 1.1f, 4f), new Vector3(3.5f, 2.2f, 0.1f), matWood);
+            CreateBarricade(env.transform, new Vector3(3.0f, 1.1f, 8f), new Vector3(4.0f, 2.2f, 0.1f), matWood);
+            CreateBarricade(env.transform, new Vector3(-1.0f, 1.1f, 12f), new Vector3(3.5f, 2.2f, 0.1f), matWood);
+
+            // Pilhas de Barris como Cobertura
+            CreateBarrel(env.transform, new Vector3(-0.5f, 0.45f, 4.2f), matBarrelYellow);
+            CreateBarrel(env.transform, new Vector3(1.2f, 0.45f, 8.2f), matBarrelBlue);
+            CreateBarrel(env.transform, new Vector3(1.2f, 1.35f, 8.2f), matBarrelBlue);
+
+            // 5 Alvos de Papelão em ângulos de visão fechados + 2 No-Shoots + 3 Poppers
+            targets.Add(CreateIPSCTarget(root, "Target_A (6m)", new Vector3(-3.2f, 1.4f, 6.5f), false, matWood));
+            targets.Add(CreateIPSCTarget(root, "NoShoot_A", new Vector3(-2.6f, 1.35f, 6.2f), true, matWood));
+            targets.Add(CreateIPSCTarget(root, "Target_B (10m)", new Vector3(1.5f, 1.4f, 10f), false, matWood));
+            targets.Add(CreateIPSCTarget(root, "Target_C (14m)", new Vector3(-4.0f, 1.4f, 14f), false, matWood));
+            targets.Add(CreateIPSCTarget(root, "NoShoot_B", new Vector3(-3.3f, 1.35f, 13.6f), true, matWood));
+            targets.Add(CreateIPSCTarget(root, "Target_D (18m)", new Vector3(3.5f, 1.4f, 18f), false, matWood));
+            targets.Add(CreateIPSCTarget(root, "Target_E (22m)", new Vector3(0f, 1.4f, 22f), false, matWood));
+
+            CreateSteelPopper(root, "Popper_Center (11m)", new Vector3(-0.8f, 0, 11f), matSteel);
+            CreateSteelPopper(root, "Popper_Right (15m)", new Vector3(4.5f, 0, 15f), matSteel);
+            CreateSteelPopper(root, "Popper_Deep (20m)", new Vector3(-2.5f, 0, 20f), matSteel);
+        }
+
+        // =========================================================================
+        // CENÁRIO 3: PISTA LONGA IPSC (GRANDE TORNEIO 30 METROS)
+        // =========================================================================
+        private static void BuildIPSCLong(Transform root, List<IPSCTarget> targets)
+        {
+            SetupSunLighting(true);
+
+            Material matGround = CreateGravelMaterial();
+            Material matWood = CreateWoodMaterial();
+            Material matBerm = CreateBermMaterial();
+            Material matHazard = CreateHazardMaterial();
+            Material matBarrelBlue = CreateBarrelMaterial(new Color(0.12f, 0.35f, 0.75f));
+            Material matBarrelYellow = CreateBarrelMaterial(new Color(0.85f, 0.70f, 0.12f));
+            Material matSteel = CreateSteelMaterial();
+
+            GameObject env = new GameObject("Environment_IPSC_Long");
+            env.transform.SetParent(root);
+
+            CreateFloor(env.transform, new Vector3(0, -0.25f, 18f), new Vector3(26f, 0.5f, 42f), matGround);
+            CreateBerm(env.transform, new Vector3(0, 3.5f, 38f), new Vector3(28f, 7f, 6f), matBerm);
+            CreateWall(env.transform, new Vector3(-12.5f, 2f, 18f), new Vector3(1f, 4f, 42f), matWood);
+            CreateWall(env.transform, new Vector3(12.5f, 2f, 18f), new Vector3(1f, 4f, 42f), matWood);
+
+            // 3 Caixas de Tiro demarcadas ao longo da pista
+            CreateShootingBox(env.transform, Vector3.zero, matHazard);
+            CreateShootingBox(env.transform, new Vector3(-3f, 0, 8f), matHazard);
+            CreateShootingBox(env.transform, new Vector3(3f, 0, 16f), matHazard);
+
+            // Diversos Biombos e Barreiras
+            CreateBarricade(env.transform, new Vector3(-1.5f, 1.1f, 5f), new Vector3(3.5f, 2.2f, 0.1f), matWood);
+            CreateBarricade(env.transform, new Vector3(2.5f, 1.1f, 11f), new Vector3(4.0f, 2.2f, 0.1f), matWood);
+            CreateBarricade(env.transform, new Vector3(-2.0f, 1.1f, 19f), new Vector3(4.5f, 2.2f, 0.1f), matWood);
+
+            // Múltiplos barris
+            CreateBarrel(env.transform, new Vector3(0.5f, 0.45f, 5.2f), matBarrelYellow);
+            CreateBarrel(env.transform, new Vector3(-1.5f, 0.45f, 11.2f), matBarrelBlue);
+            CreateBarrel(env.transform, new Vector3(-1.5f, 1.35f, 11.2f), matBarrelBlue);
+
+            // 8 Alvos de Papelão + 4 Poppers
+            for (int i = 1; i <= 8; i++)
+            {
+                float zDist = 6f + (i * 3.2f);
+                float xOffset = ((i % 2 == 0) ? 1 : -1) * (1.8f + (i * 0.4f));
+                bool isNoShoot = (i == 3 || i == 6);
+                targets.Add(CreateIPSCTarget(root, $"Target_{i:D2} ({zDist:F0}m)", new Vector3(xOffset, 1.4f, zDist), isNoShoot, matWood));
+            }
+
+            CreateSteelPopper(root, "Popper_A (12m)", new Vector3(-3.5f, 0, 12f), matSteel);
+            CreateSteelPopper(root, "Popper_B (18m)", new Vector3(4.2f, 0, 18f), matSteel);
+            CreateSteelPopper(root, "Popper_C (24m)", new Vector3(-2.8f, 0, 24f), matSteel);
+            CreateSteelPopper(root, "Popper_D (28m)", new Vector3(2.5f, 0, 28f), matSteel);
+        }
+
+        // =========================================================================
+        // CENÁRIO 4: ESTANDE INDOOR DE PRECISÃO (CABINES E ALVOS EM TRILHOS)
+        // =========================================================================
+        private static void BuildIndoorStand(Transform root, List<IPSCTarget> targets)
+        {
+            SetupIndoorLighting();
+
+            Material matConcrete = CreateConcreteMaterial();
+            Material matAcoustic = ProceduralMaterials.CreateMaterial(new Color(0.18f, 0.18f, 0.20f), "Mat_AcousticDark", 0.1f, 0.05f);
+            Material matWood = CreateWoodMaterial();
+            Material matHazard = CreateHazardMaterial();
+            Material matSteel = CreateSteelMaterial();
+
+            GameObject env = new GameObject("Environment_Indoor_Precision");
+            env.transform.SetParent(root);
+
+            // Chão de Concreto Polido
+            CreateFloor(env.transform, new Vector3(0, -0.25f, 14f), new Vector3(14f, 0.5f, 34f), matConcrete);
+
+            // Teto com Vigas de Aço Industriais
+            GameObject ceiling = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            ceiling.name = "Ceiling_Industrial";
+            ceiling.transform.SetParent(env.transform);
+            ceiling.transform.position = new Vector3(0, 4.2f, 14f);
+            ceiling.transform.localScale = new Vector3(14f, 0.3f, 34f);
+            ceiling.GetComponent<MeshRenderer>().material = matAcoustic;
+
+            // Paredes Acústicas Escuras
+            CreateWall(env.transform, new Vector3(-6.8f, 2f, 14f), new Vector3(0.5f, 4.2f, 34f), matAcoustic);
+            CreateWall(env.transform, new Vector3(6.8f, 2f, 14f), new Vector3(0.5f, 4.2f, 34f), matAcoustic);
+            CreateWall(env.transform, new Vector3(0, 2f, 30.5f), new Vector3(14f, 4.2f, 0.5f), matAcoustic);
+
+            // 4 Baias de Tiro Individuais
+            float[] laneX = { -3.6f, -1.2f, 1.2f, 3.6f };
+            for (int i = 0; i < laneX.Length; i++)
+            {
+                CreateShootingLane(env.transform, laneX[i], i + 1, matWood, matAcoustic);
+            }
+
+            // Linhas de Distância Amarelas no Chão (5m, 10m, 15m, 20m, 25m)
+            float[] distances = { 5f, 10f, 15f, 20f, 25f };
+            foreach (float d in distances)
+            {
+                CreateDistanceLine(env.transform, d, matHazard);
+            }
+
+            // Alvos suspensos nas baias
+            targets.Add(CreateIPSCTarget(root, "Alvo_Baia_1 (10m)", new Vector3(-3.6f, 1.5f, 10f), false, matWood));
+            targets.Add(CreateIPSCTarget(root, "Alvo_Baia_2 (15m)", new Vector3(-1.2f, 1.5f, 15f), false, matWood));
+            targets.Add(CreateIPSCTarget(root, "Alvo_Baia_3 (20m)", new Vector3(1.2f, 1.5f, 20f), false, matWood));
+            targets.Add(CreateIPSCTarget(root, "Alvo_Baia_4 (25m)", new Vector3(3.6f, 1.5f, 25f), false, matWood));
+
+            CreateSteelPopper(root, "Chapa_Metal_10m", new Vector3(0f, 0, 10.5f), matSteel);
+            CreateSteelPopper(root, "Chapa_Metal_20m", new Vector3(0f, 0, 20.5f), matSteel);
+        }
+
+        private static void CreateShootingLane(Transform parent, float x, int laneNum, Material woodMat, Material partitionMat)
+        {
+            GameObject lane = new GameObject($"ShootingLane_{laneNum}");
+            lane.transform.SetParent(parent);
+            lane.transform.position = new Vector3(x, 0, 0);
+
+            // Divisória lateral esquerda
+            GameObject wallL = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            wallL.transform.SetParent(lane.transform);
+            wallL.transform.localPosition = new Vector3(-1.0f, 1.2f, 0.8f);
+            wallL.transform.localScale = new Vector3(0.08f, 2.4f, 1.8f);
+            wallL.GetComponent<MeshRenderer>().material = partitionMat;
+
+            // Balcão de apoio de armas
+            GameObject counter = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            counter.transform.SetParent(lane.transform);
+            counter.transform.localPosition = new Vector3(0, 0.85f, 1.2f);
+            counter.transform.localScale = new Vector3(1.9f, 0.08f, 0.5f);
+            counter.GetComponent<MeshRenderer>().material = woodMat;
+        }
+
+        private static void CreateDistanceLine(Transform parent, float z, Material mat)
+        {
+            GameObject line = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            line.name = $"Distance_Line_{z}m";
+            line.transform.SetParent(parent);
+            line.transform.position = new Vector3(0, 0.01f, z);
+            line.transform.localScale = new Vector3(12f, 0.02f, 0.15f);
+            line.GetComponent<MeshRenderer>().material = mat;
+            Object.DestroyImmediate(line.GetComponent<Collider>());
+        }
+
+        // =========================================================================
+        // CENÁRIO 5: ARMAZÉM TÁTICO CQB (ESTILO COUNTER-STRIKE)
+        // =========================================================================
+        private static void BuildCSKillhouse(Transform root, List<IPSCTarget> targets)
+        {
+            SetupTacticalCSLighting();
+
+            Material matConcrete = CreateConcreteMaterial();
+            Material matCrate = CreateCrateMaterial();
+            Material matWood = CreateWoodMaterial();
+            Material matContainerRed = ProceduralMaterials.CreateMaterial(new Color(0.72f, 0.20f, 0.15f), "Mat_ContainerRed", 0.4f, 0.4f);
+            Material matContainerBlue = ProceduralMaterials.CreateMaterial(new Color(0.15f, 0.32f, 0.65f), "Mat_ContainerBlue", 0.4f, 0.4f);
+            Material matSteel = CreateSteelMaterial();
+
+            GameObject env = new GameObject("Environment_CS_Killhouse");
+            env.transform.SetParent(root);
+
+            // Piso de Galpão Industrial
+            CreateFloor(env.transform, new Vector3(0, -0.25f, 16f), new Vector3(24f, 0.5f, 36f), matConcrete);
+
+            // Paredes de Armazém Urbano
+            Material matWall = ProceduralMaterials.CreateMaterial(new Color(0.35f, 0.35f, 0.38f), "Mat_WarehouseWall", 0.15f, 0.05f);
+            CreateWall(env.transform, new Vector3(-11.5f, 2.5f, 16f), new Vector3(1f, 5f, 36f), matWall);
+            CreateWall(env.transform, new Vector3(11.5f, 2.5f, 16f), new Vector3(1f, 5f, 36f), matWall);
+            CreateWall(env.transform, new Vector3(0, 2.5f, 33.5f), new Vector3(24f, 5f, 1f), matWall);
+
+            // Contêineres de Carga Marítimos de 6 metros (Shipping Containers estilo CS)
+            CreateShippingContainer(env.transform, new Vector3(-4f, 1.3f, 9f), new Vector3(2.5f, 2.6f, 6.0f), matContainerRed, 12f);
+            CreateShippingContainer(env.transform, new Vector3(4.5f, 1.3f, 18f), new Vector3(2.5f, 2.6f, 6.0f), matContainerBlue, -25f);
+
+            // Pilhas de Caixas de Madeira Militares (Crates)
+            CreateCrateStack(env.transform, new Vector3(2.5f, 0, 7f), matCrate);
+            CreateCrateStack(env.transform, new Vector3(-3.5f, 0, 18f), matCrate);
+            CreateCrateStack(env.transform, new Vector3(0f, 0, 24f), matCrate);
+
+            // Alvos de Ameaça Tática em Esquinas (Corner Clearing)
+            targets.Add(CreateIPSCTarget(root, "Ameaça_Esquina_1 (7m)", new Vector3(-1.8f, 1.4f, 7.5f), false, matWood));
+            targets.Add(CreateIPSCTarget(root, "Refem_Civil_1", new Vector3(-1.1f, 1.35f, 7.2f), true, matWood));
+
+            targets.Add(CreateIPSCTarget(root, "Ameaça_Atras_Container (12m)", new Vector3(-5.2f, 1.4f, 12.5f), false, matWood));
+            targets.Add(CreateIPSCTarget(root, "Ameaça_Corredor_Direito (16m)", new Vector3(3.2f, 1.4f, 16.0f), false, matWood));
+            targets.Add(CreateIPSCTarget(root, "Refem_Civil_2", new Vector3(3.9f, 1.35f, 15.6f), true, matWood));
+
+            targets.Add(CreateIPSCTarget(root, "Ameaça_Fundo_Killhouse (24m)", new Vector3(-2.0f, 1.4f, 24.5f), false, matWood));
+            targets.Add(CreateIPSCTarget(root, "Ameaça_Janela_Final (28m)", new Vector3(4.0f, 1.4f, 28.0f), false, matWood));
+
+            CreateSteelPopper(root, "Popper_Ameaça_Metal", new Vector3(1.2f, 0, 13f), matSteel);
+            CreateSteelPopper(root, "Popper_Ameaça_Fundo", new Vector3(-4.5f, 0, 22f), matSteel);
+        }
+
+        private static void CreateShippingContainer(Transform parent, Vector3 pos, Vector3 scale, Material mat, float yRot)
+        {
+            GameObject container = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            container.name = "Shipping_Container_6m";
+            container.transform.SetParent(parent);
+            container.transform.position = pos;
+            container.transform.localScale = scale;
+            container.transform.rotation = Quaternion.Euler(0, yRot, 0);
+            container.GetComponent<MeshRenderer>().material = mat;
+        }
+
+        private static void CreateCrateStack(Transform parent, Vector3 basePos, Material mat)
+        {
+            GameObject stack = new GameObject("Crates_Stack");
+            stack.transform.SetParent(parent);
+            stack.transform.position = basePos;
+
+            // Caixa 1 (baixo)
+            CreateSingleCrate(stack.transform, new Vector3(0, 0.55f, 0), new Vector3(1.1f, 1.1f, 1.1f), mat);
+            // Caixa 2 (ao lado)
+            CreateSingleCrate(stack.transform, new Vector3(1.15f, 0.55f, 0.1f), new Vector3(1.1f, 1.1f, 1.1f), mat);
+            // Caixa 3 (em cima)
+            CreateSingleCrate(stack.transform, new Vector3(0.5f, 1.65f, 0.05f), new Vector3(1.0f, 1.0f, 1.0f), mat);
+        }
+
+        private static void CreateSingleCrate(Transform parent, Vector3 pos, Vector3 scale, Material mat)
+        {
+            GameObject crate = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            crate.name = "Military_Crate";
+            crate.transform.SetParent(parent);
+            crate.transform.localPosition = pos;
+            crate.transform.localScale = scale;
+            crate.GetComponent<MeshRenderer>().material = mat;
+        }
+
+        // =========================================================================
+        // JOGADOR E SELEÇÃO DE ARMAS
+        // =========================================================================
+        private static void CreatePlayerWithWeapon(Transform parent, GameObject bulletPrefab, GameObject decalPrefab, SelectedWeaponType weaponType)
+        {
+            GameObject player = new GameObject("Player");
+            player.transform.SetParent(parent);
+            player.transform.position = new Vector3(0f, 1.0f, 0f);
+
+            CharacterController cc = player.AddComponent<CharacterController>();
+            cc.height = 1.8f;
+            cc.radius = 0.35f;
+            cc.center = new Vector3(0, 0.9f, 0);
+
+            PlayerController controller = player.AddComponent<PlayerController>();
+
+            // Câmera do Jogador
+            GameObject camObj = new GameObject("PlayerCamera");
+            camObj.transform.SetParent(player.transform);
+            camObj.transform.localPosition = new Vector3(0f, 1.65f, 0f);
+            Camera cam = camObj.AddComponent<Camera>();
+            camObj.tag = "MainCamera";
+            camObj.AddComponent<AudioListener>();
+            cam.fieldOfView = 68f;
+            cam.nearClipPlane = 0.02f;
+
+            // Desativa câmeras antigas
+            foreach (Camera c in Object.FindObjectsByType<Camera>(FindObjectsSortMode.None))
+            {
+                if (c != cam && c != null) c.gameObject.SetActive(false);
+            }
+
+            SetFieldValue(controller, "playerCameraTransform", camObj.transform);
+
+            // Suporte da Arma
+            GameObject holder = new GameObject("WeaponHolder");
+            holder.transform.SetParent(camObj.transform);
+            holder.transform.localPosition = new Vector3(0.18f, -0.22f, 0.42f);
+
+            WeaponHandling handling = holder.AddComponent<WeaponHandling>();
+
+            // Instancia ou constrói a arma selecionada
+            AttachSelectedWeapon(holder, handling, bulletPrefab, decalPrefab, weaponType);
+        }
+
+        private static void AttachSelectedWeapon(GameObject holder, WeaponHandling handling, GameObject bulletPrefab, GameObject decalPrefab, SelectedWeaponType weaponType)
+        {
+            Material matMetal = ProceduralMaterials.CreateMaterial(new Color(0.10f, 0.10f, 0.11f), "Mat_GunBlack", 0.6f, 0.7f);
+            Material matSlide = ProceduralMaterials.CreateMaterial(new Color(0.18f, 0.18f, 0.20f), "Mat_GunSlide", 0.75f, 0.85f);
+            Material matBrass = ProceduralMaterials.CreateMaterial(new Color(0.92f, 0.78f, 0.32f), "Mat_BrassGold", 0.85f, 0.95f);
+            Material matFiber = ProceduralMaterials.CreateEmissiveMaterial(new Color(1f, 0.1f, 0.05f), "Mat_FiberOpticGlow", 2.0f);
+
+            GameObject gunRoot = new GameObject($"Weapon_{weaponType}");
+            gunRoot.transform.SetParent(holder.transform);
+            gunRoot.transform.localPosition = Vector3.zero;
+            gunRoot.transform.localRotation = Quaternion.identity;
+
+            // Tenta carregar modelo importado ou cria procedural de alta qualidade
+            GameObject muzzleObj = new GameObject("MuzzlePoint");
+            muzzleObj.transform.SetParent(gunRoot.transform);
+
+            Transform slideObj = null;
+
+            int capacity = 17;
+            float velocity = 380f;
+            bool isAuto = false;
+            float recoilMult = 1.0f;
+            Vector3 adsPos = new Vector3(0f, -0.0465f, 0.32f);
+
+            switch (weaponType)
+            {
+                case SelectedWeaponType.Pistol_9mm:
+                    capacity = 17;
+                    velocity = 380f;
+                    isAuto = false;
+                    recoilMult = 1.0f;
+                    adsPos = new Vector3(0f, -0.0465f, 0.32f);
+                    slideObj = BuildDetailedPistolMesh(gunRoot.transform, muzzleObj.transform, matMetal, matSlide, matFiber, matBrass);
+                    break;
+
+                case SelectedWeaponType.Revolver_DanWesson:
+                    capacity = 6;
+                    velocity = 450f;
+                    isAuto = false;
+                    recoilMult = 1.75f; // Recuo potente de revólver Magnum
+                    adsPos = new Vector3(0f, -0.052f, 0.30f);
+                    slideObj = BuildDetailedRevolverMesh(gunRoot.transform, muzzleObj.transform, matMetal, matSlide, matFiber, matBrass);
+                    break;
+
+                case SelectedWeaponType.SMG_Tactical:
+                    capacity = 30;
+                    velocity = 410f;
+                    isAuto = true; // Automática contínua
+                    recoilMult = 0.85f;
+                    adsPos = new Vector3(0f, -0.065f, 0.32f);
+                    slideObj = BuildDetailedSMGMesh(gunRoot.transform, muzzleObj.transform, matMetal, matSlide, matFiber);
+                    break;
+            }
+
+            Weapon weapon = gunRoot.AddComponent<Weapon>();
+            AudioSource audio = gunRoot.AddComponent<AudioSource>();
+            audio.playOnAwake = false;
+
+            SetFieldValue(weapon, "muzzlePoint", muzzleObj.transform);
+            SetFieldValue(weapon, "bulletPrefab", bulletPrefab);
+            SetFieldValue(weapon, "bulletHoleDecalPrefab", decalPrefab);
+            SetFieldValue(weapon, "slideTransform", slideObj != null ? slideObj : gunRoot.transform);
+            SetFieldValue(weapon, "audioSource", audio);
+            SetFieldValue(weapon, "fireSound", ProceduralAudio.CreateGunshotClip());
+            SetFieldValue(weapon, "dryFireSound", ProceduralAudio.CreateDryFireClip());
+            SetFieldValue(weapon, "slideLockSound", ProceduralAudio.CreateSlideLockClip());
+
+            weapon.ConfigureWeapon(capacity, velocity);
+            handling.ConfigureHandling(isAuto, recoilMult, adsPos);
+
+            SetFieldValue(handling, "weapon", weapon);
+            SetFieldValue(handling, "weaponTransform", holder.transform);
+            SetFieldValue(handling, "hipPosition", new Vector3(0.18f, -0.22f, 0.42f));
+        }
+
+        private static Transform BuildDetailedPistolMesh(Transform parent, Transform muzzle, Material matMetal, Material matSlide, Material matFiber, Material matBrass)
+        {
+            // Grip
+            GameObject grip = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            grip.name = "Pistol_Grip";
+            grip.transform.SetParent(parent);
+            grip.transform.localPosition = new Vector3(0f, -0.06f, -0.02f);
+            grip.transform.localScale = new Vector3(0.028f, 0.12f, 0.046f);
+            grip.transform.localRotation = Quaternion.Euler(18f, 0, 0);
+            grip.GetComponent<MeshRenderer>().material = matMetal;
+            Object.DestroyImmediate(grip.GetComponent<Collider>());
+
+            // Guarda-mato e Gatilho
+            GameObject guard = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            guard.transform.SetParent(parent);
+            guard.transform.localPosition = new Vector3(0f, -0.03f, 0.035f);
+            guard.transform.localScale = new Vector3(0.018f, 0.035f, 0.045f);
+            guard.GetComponent<MeshRenderer>().material = matMetal;
+            Object.DestroyImmediate(guard.GetComponent<Collider>());
+
+            // Ferrolho móvel
+            GameObject slide = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            slide.name = "Pistol_Slide";
+            slide.transform.SetParent(parent);
+            slide.transform.localPosition = new Vector3(0f, 0.026f, 0.04f);
+            slide.transform.localScale = new Vector3(0.031f, 0.028f, 0.18f);
+            slide.GetComponent<MeshRenderer>().material = matSlide;
+            Object.DestroyImmediate(slide.GetComponent<Collider>());
+
+            // Miras com Fibra Ótica
+            GameObject sightBlade = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            sightBlade.transform.SetParent(slide.transform);
+            sightBlade.transform.localPosition = new Vector3(0f, 0.58f, 0.44f);
+            sightBlade.transform.localScale = new Vector3(0.12f, 0.28f, 0.06f);
+            sightBlade.GetComponent<MeshRenderer>().material = matMetal;
+            Object.DestroyImmediate(sightBlade.GetComponent<Collider>());
+
+            GameObject fiber = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            fiber.transform.SetParent(sightBlade.transform);
+            fiber.transform.localPosition = new Vector3(0f, 0.2f, 0f);
+            fiber.transform.localScale = new Vector3(0.4f, 0.7f, 0.4f);
+            fiber.transform.localRotation = Quaternion.Euler(90f, 0, 0);
+            fiber.GetComponent<MeshRenderer>().material = matFiber;
+            Object.DestroyImmediate(fiber.GetComponent<Collider>());
+
+            muzzle.localPosition = new Vector3(0f, 0.022f, 0.145f);
+            return slide.transform;
+        }
+
+        private static Transform BuildDetailedRevolverMesh(Transform parent, Transform muzzle, Material matMetal, Material matSlide, Material matFiber, Material matBrass)
+        {
+            // Empunhadura de Madeira clássica
+            Material matRevolverWood = ProceduralMaterials.CreateMaterial(new Color(0.45f, 0.25f, 0.12f), "Mat_RevolverWood", 0.6f, 0.0f);
+            GameObject grip = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            grip.name = "Revolver_Grip";
+            grip.transform.SetParent(parent);
+            grip.transform.localPosition = new Vector3(0f, -0.07f, -0.04f);
+            grip.transform.localScale = new Vector3(0.030f, 0.13f, 0.052f);
+            grip.transform.localRotation = Quaternion.Euler(22f, 0, 0);
+            grip.GetComponent<MeshRenderer>().material = matRevolverWood;
+            Object.DestroyImmediate(grip.GetComponent<Collider>());
+
+            // Armação de Aço Inox
+            GameObject frame = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            frame.name = "Revolver_Frame";
+            frame.transform.SetParent(parent);
+            frame.transform.localPosition = new Vector3(0f, 0.01f, 0.01f);
+            frame.transform.localScale = new Vector3(0.032f, 0.045f, 0.08f);
+            frame.GetComponent<MeshRenderer>().material = matSlide;
+            Object.DestroyImmediate(frame.GetComponent<Collider>());
+
+            // Tambor Cilindrico Rotativo (.357 Magnum)
+            GameObject cylinder = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            cylinder.name = "Revolver_Cylinder";
+            cylinder.transform.SetParent(parent);
+            cylinder.transform.localPosition = new Vector3(0f, 0.01f, 0.01f);
+            cylinder.transform.localScale = new Vector3(0.042f, 0.035f, 0.042f);
+            cylinder.transform.localRotation = Quaternion.Euler(90f, 0, 0);
+            cylinder.GetComponent<MeshRenderer>().material = matMetal;
+            Object.DestroyImmediate(cylinder.GetComponent<Collider>());
+
+            // Cano Longo de 6 polegadas (Dan Wesson Barrel)
+            GameObject barrel = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            barrel.name = "Revolver_Barrel";
+            barrel.transform.SetParent(parent);
+            barrel.transform.localPosition = new Vector3(0f, 0.022f, 0.13f);
+            barrel.transform.localScale = new Vector3(0.024f, 0.032f, 0.16f);
+            barrel.GetComponent<MeshRenderer>().material = matSlide;
+            Object.DestroyImmediate(barrel.GetComponent<Collider>());
+
+            // Massa de mira alta
+            GameObject sight = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            sight.transform.SetParent(barrel.transform);
+            sight.transform.localPosition = new Vector3(0f, 0.65f, 0.45f);
+            sight.transform.localScale = new Vector3(0.15f, 0.35f, 0.08f);
+            sight.GetComponent<MeshRenderer>().material = matFiber;
+            Object.DestroyImmediate(sight.GetComponent<Collider>());
+
+            muzzle.localPosition = new Vector3(0f, 0.022f, 0.22f);
+            return barrel.transform;
+        }
+
+        private static Transform BuildDetailedSMGMesh(Transform parent, Transform muzzle, Material matMetal, Material matSlide, Material matFiber)
+        {
+            // Corpo Principal da SMG
+            GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            body.name = "SMG_Receiver";
+            body.transform.SetParent(parent);
+            body.transform.localPosition = new Vector3(0f, 0.02f, 0.08f);
+            body.transform.localScale = new Vector3(0.038f, 0.055f, 0.26f);
+            body.GetComponent<MeshRenderer>().material = matMetal;
+            Object.DestroyImmediate(body.GetComponent<Collider>());
+
+            // Empunhadura
+            GameObject grip = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            grip.transform.SetParent(parent);
+            grip.transform.localPosition = new Vector3(0f, -0.06f, 0.01f);
+            grip.transform.localScale = new Vector3(0.028f, 0.12f, 0.045f);
+            grip.transform.localRotation = Quaternion.Euler(15f, 0, 0);
+            grip.GetComponent<MeshRenderer>().material = matMetal;
+            Object.DestroyImmediate(grip.GetComponent<Collider>());
+
+            // Carregador Curvo Longo de 30 tiros
+            GameObject mag = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            mag.transform.SetParent(parent);
+            mag.transform.localPosition = new Vector3(0f, -0.09f, 0.12f);
+            mag.transform.localScale = new Vector3(0.024f, 0.16f, 0.035f);
+            mag.transform.localRotation = Quaternion.Euler(-12f, 0, 0);
+            mag.GetComponent<MeshRenderer>().material = matSlide;
+            Object.DestroyImmediate(mag.GetComponent<Collider>());
+
+            // Cano e Quebra-Chamas
+            GameObject barrel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            barrel.transform.SetParent(parent);
+            barrel.transform.localPosition = new Vector3(0f, 0.025f, 0.24f);
+            barrel.transform.localScale = new Vector3(0.018f, 0.06f, 0.018f);
+            barrel.transform.localRotation = Quaternion.Euler(90f, 0, 0);
+            barrel.GetComponent<MeshRenderer>().material = matMetal;
+            Object.DestroyImmediate(barrel.GetComponent<Collider>());
+
+            muzzle.localPosition = new Vector3(0f, 0.025f, 0.31f);
+            return body.transform;
+        }
+
+        // =========================================================================
+        // UTILITÁRIOS DE CRIAÇÃO E MATERIAIS
+        // =========================================================================
+        private static void SetupSunLighting(bool warm)
+        {
             Light sun = Object.FindAnyObjectByType<Light>();
             if (sun == null)
             {
@@ -172,24 +702,162 @@ namespace IPSCSimulator.Setup
             }
 
             sun.transform.rotation = Quaternion.Euler(42f, -38f, 0f);
-            sun.color = new Color(1.0f, 0.96f, 0.88f); // Luz dourada e quente de sol
+            sun.color = warm ? new Color(1.0f, 0.96f, 0.88f) : Color.white;
             sun.intensity = 1.35f;
             sun.shadows = LightShadows.Soft;
             sun.shadowResolution = UnityEngine.Rendering.LightShadowResolution.VeryHigh;
             sun.shadowBias = 0.04f;
             sun.shadowNormalBias = 0.35f;
 
-            // Iluminação Ambiente Trilight (Céu azul, horizonte suave, terra quente)
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
             RenderSettings.ambientSkyColor = new Color(0.68f, 0.80f, 0.96f);
             RenderSettings.ambientEquatorColor = new Color(0.72f, 0.68f, 0.62f);
             RenderSettings.ambientGroundColor = new Color(0.40f, 0.34f, 0.26f);
 
-            // Névoa Atmosférica de Profundidade
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Exponential;
             RenderSettings.fogDensity = 0.007f;
             RenderSettings.fogColor = new Color(0.76f, 0.82f, 0.88f);
+        }
+
+        private static void SetupIndoorLighting()
+        {
+            Light sun = Object.FindAnyObjectByType<Light>();
+            if (sun != null)
+            {
+                sun.color = new Color(0.85f, 0.90f, 0.95f);
+                sun.intensity = 0.45f;
+                sun.transform.rotation = Quaternion.Euler(85f, 0, 0);
+                sun.shadows = LightShadows.Soft;
+            }
+
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = new Color(0.35f, 0.38f, 0.45f);
+            RenderSettings.ambientEquatorColor = new Color(0.25f, 0.25f, 0.28f);
+            RenderSettings.ambientGroundColor = new Color(0.15f, 0.15f, 0.16f);
+
+            RenderSettings.fog = false;
+        }
+
+        private static void SetupTacticalCSLighting()
+        {
+            Light sun = Object.FindAnyObjectByType<Light>();
+            if (sun != null)
+            {
+                sun.color = new Color(0.95f, 0.90f, 0.80f);
+                sun.intensity = 0.85f;
+                sun.transform.rotation = Quaternion.Euler(55f, 45f, 0);
+                sun.shadows = LightShadows.Soft;
+            }
+
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = new Color(0.45f, 0.48f, 0.55f);
+            RenderSettings.ambientEquatorColor = new Color(0.35f, 0.35f, 0.35f);
+            RenderSettings.ambientGroundColor = new Color(0.20f, 0.20f, 0.20f);
+
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.Exponential;
+            RenderSettings.fogDensity = 0.009f;
+            RenderSettings.fogColor = new Color(0.40f, 0.42f, 0.45f);
+        }
+
+        private static Material CreateGravelMaterial()
+        {
+            Material mat = ProceduralMaterials.CreateMaterial(new Color(0.48f, 0.43f, 0.36f), "Mat_Gravel_PBR", 0.15f, 0.05f);
+            mat.mainTexture = ProceduralMaterials.CreateGravelTexture();
+            mat.mainTextureScale = new Vector2(10f, 18f);
+            return mat;
+        }
+
+        private static Material CreateWoodMaterial()
+        {
+            Material mat = ProceduralMaterials.CreateMaterial(new Color(0.65f, 0.50f, 0.33f), "Mat_Wood_Planks", 0.25f, 0.0f);
+            mat.mainTexture = ProceduralMaterials.CreateWoodPlankTexture();
+            mat.mainTextureScale = new Vector2(2f, 8f);
+            return mat;
+        }
+
+        private static Material CreateConcreteMaterial()
+        {
+            Material mat = ProceduralMaterials.CreateMaterial(new Color(0.40f, 0.40f, 0.42f), "Mat_Concrete_Industrial", 0.35f, 0.1f);
+            mat.mainTexture = ProceduralMaterials.CreateConcreteTexture();
+            mat.mainTextureScale = new Vector2(8f, 12f);
+            return mat;
+        }
+
+        private static Material CreateCrateMaterial()
+        {
+            Material mat = ProceduralMaterials.CreateMaterial(new Color(0.38f, 0.42f, 0.28f), "Mat_MilitaryCrate", 0.2f, 0.0f);
+            mat.mainTexture = ProceduralMaterials.CreateMilitaryCrateTexture();
+            return mat;
+        }
+
+        private static Material CreateBermMaterial()
+        {
+            Material mat = ProceduralMaterials.CreateMaterial(new Color(0.32f, 0.22f, 0.15f), "Mat_EarthBerm", 0.05f, 0.0f);
+            mat.mainTexture = ProceduralMaterials.CreateGravelTexture();
+            mat.mainTextureScale = new Vector2(6f, 4f);
+            return mat;
+        }
+
+        private static Material CreateHazardMaterial()
+        {
+            Material mat = ProceduralMaterials.CreateMaterial(Color.white, "Mat_HazardStripes", 0.3f, 0.0f);
+            mat.mainTexture = ProceduralMaterials.CreateWarningStripeTexture();
+            mat.mainTextureScale = new Vector2(1f, 8f);
+            return mat;
+        }
+
+        private static Material CreateBarrelMaterial(Color color)
+        {
+            Material mat = ProceduralMaterials.CreateMaterial(color, "Mat_Barrel", 0.55f, 0.45f);
+            mat.mainTexture = ProceduralMaterials.CreateBarrelTexture(color);
+            return mat;
+        }
+
+        private static Material CreateSteelMaterial()
+        {
+            return ProceduralMaterials.CreateMaterial(new Color(0.90f, 0.90f, 0.92f), "Mat_SteelPlate", 0.5f, 0.65f);
+        }
+
+        private static void CreateFloor(Transform parent, Vector3 pos, Vector3 scale, Material mat)
+        {
+            GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            ground.name = "Floor";
+            ground.transform.SetParent(parent);
+            ground.transform.position = pos;
+            ground.transform.localScale = scale;
+            ground.GetComponent<MeshRenderer>().material = mat;
+        }
+
+        private static void CreateBerm(Transform parent, Vector3 pos, Vector3 scale, Material mat)
+        {
+            GameObject berm = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            berm.name = "Backstop_Berm";
+            berm.transform.SetParent(parent);
+            berm.transform.position = pos;
+            berm.transform.localScale = scale;
+            berm.GetComponent<MeshRenderer>().material = mat;
+        }
+
+        private static void CreateWall(Transform parent, Vector3 pos, Vector3 scale, Material mat)
+        {
+            GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            wall.name = "Wall";
+            wall.transform.SetParent(parent);
+            wall.transform.position = pos;
+            wall.transform.localScale = scale;
+            wall.GetComponent<MeshRenderer>().material = mat;
+        }
+
+        private static void CreateBarricade(Transform parent, Vector3 pos, Vector3 scale, Material mat)
+        {
+            GameObject barricade = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            barricade.name = "Barricade";
+            barricade.transform.SetParent(parent);
+            barricade.transform.position = pos;
+            barricade.transform.localScale = scale;
+            barricade.GetComponent<MeshRenderer>().material = mat;
         }
 
         private static void CreateBarrel(Transform parent, Vector3 pos, Material mat)
@@ -198,124 +866,8 @@ namespace IPSCSimulator.Setup
             barrel.name = "Tactical_Barrel_55Gal";
             barrel.transform.SetParent(parent);
             barrel.transform.position = pos;
-            barrel.transform.localScale = new Vector3(0.62f, 0.48f, 0.62f); // Altura de ~0.96m
+            barrel.transform.localScale = new Vector3(0.62f, 0.48f, 0.62f);
             barrel.GetComponent<MeshRenderer>().material = mat;
-        }
-
-        private static void CreateBarricade(Transform parent, Vector3 pos, Vector3 scale, Material mat)
-        {
-            GameObject barricade = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            barricade.name = "Vision_Barricade";
-            barricade.transform.SetParent(parent);
-            barricade.transform.position = pos;
-            barricade.transform.localScale = scale;
-            barricade.GetComponent<MeshRenderer>().material = mat;
-        }
-
-        private static void CreateShootingBench(Transform parent, Vector3 pos, Material woodMat, Material brassMat)
-        {
-            GameObject benchRoot = new GameObject("Safety_Area_Bench");
-            benchRoot.transform.SetParent(parent);
-            benchRoot.transform.position = pos;
-
-            // Tampo da mesa
-            GameObject top = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            top.name = "Bench_Top";
-            top.transform.SetParent(benchRoot.transform);
-            top.transform.localPosition = new Vector3(0, 0.85f, 0);
-            top.transform.localScale = new Vector3(1.4f, 0.08f, 0.75f);
-            top.GetComponent<MeshRenderer>().material = woodMat;
-
-            // Pés da mesa
-            CreateBenchLeg(benchRoot.transform, new Vector3(-0.6f, 0.42f, -0.3f), woodMat);
-            CreateBenchLeg(benchRoot.transform, new Vector3(0.6f, 0.42f, -0.3f), woodMat);
-            CreateBenchLeg(benchRoot.transform, new Vector3(-0.6f, 0.42f, 0.3f), woodMat);
-            CreateBenchLeg(benchRoot.transform, new Vector3(0.6f, 0.42f, 0.3f), woodMat);
-
-            // Caixas de Munição 9mm sobre a mesa
-            Material matAmmoBox = ProceduralMaterials.CreateMaterial(new Color(0.20f, 0.30f, 0.18f), "Mat_AmmoBox_Green", 0.4f, 0.1f);
-            GameObject box1 = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            box1.name = "AmmoBox_9mm";
-            box1.transform.SetParent(benchRoot.transform);
-            box1.transform.localPosition = new Vector3(-0.35f, 0.94f, 0.05f);
-            box1.transform.localScale = new Vector3(0.18f, 0.10f, 0.12f);
-            box1.transform.localRotation = Quaternion.Euler(0, 15f, 0);
-            box1.GetComponent<MeshRenderer>().material = matAmmoBox;
-            Object.DestroyImmediate(box1.GetComponent<Collider>());
-
-            // Estojos de bala dourados espalhados
-            for (int i = 0; i < 5; i++)
-            {
-                GameObject casing = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                casing.name = $"Brass_Casing_{i}";
-                casing.transform.SetParent(benchRoot.transform);
-                casing.transform.localPosition = new Vector3(Random.Range(-0.1f, 0.4f), 0.90f, Random.Range(-0.2f, 0.2f));
-                casing.transform.localScale = new Vector3(0.012f, 0.02f, 0.012f);
-                casing.transform.localRotation = Quaternion.Euler(90f, Random.Range(0, 360f), 0);
-                casing.GetComponent<MeshRenderer>().material = brassMat;
-                Object.DestroyImmediate(casing.GetComponent<Collider>());
-            }
-        }
-
-        private static void CreateBenchLeg(Transform parent, Vector3 localPos, Material mat)
-        {
-            GameObject leg = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            leg.transform.SetParent(parent);
-            leg.transform.localPosition = localPos;
-            leg.transform.localScale = new Vector3(0.08f, 0.84f, 0.08f);
-            leg.GetComponent<MeshRenderer>().material = mat;
-        }
-
-        private static void CreateSteelPopper(Transform parent, string name, Vector3 pos, Material mat)
-        {
-            GameObject popperRoot = new GameObject(name);
-            popperRoot.transform.SetParent(parent);
-            popperRoot.transform.position = pos;
-
-            // Base de apoio no chão
-            GameObject basePlate = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            basePlate.name = "Popper_Base";
-            basePlate.transform.SetParent(popperRoot.transform);
-            basePlate.transform.localPosition = new Vector3(0f, 0.04f, 0f);
-            basePlate.transform.localScale = new Vector3(0.45f, 0.08f, 0.55f);
-            basePlate.GetComponent<MeshRenderer>().material = mat;
-
-            // Eixo rotativo (Hinge)
-            GameObject hinge = new GameObject("Popper_Hinge");
-            hinge.transform.SetParent(popperRoot.transform);
-            hinge.transform.localPosition = new Vector3(0f, 0.08f, 0f);
-
-            // Haste de aço vertical
-            GameObject pole = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            pole.name = "Popper_Body";
-            pole.transform.SetParent(hinge.transform);
-            pole.transform.localPosition = new Vector3(0f, 0.42f, 0f);
-            pole.transform.localScale = new Vector3(0.16f, 0.75f, 0.035f);
-            pole.GetComponent<MeshRenderer>().material = mat;
-
-            // Cabeça circular de impacto (Steel Plate)
-            GameObject head = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            head.name = "Popper_Head";
-            head.transform.SetParent(hinge.transform);
-            head.transform.localPosition = new Vector3(0f, 0.85f, 0f);
-            head.transform.localScale = new Vector3(0.35f, 0.02f, 0.35f);
-            head.transform.localRotation = Quaternion.Euler(90f, 0, 0);
-            head.GetComponent<MeshRenderer>().material = mat;
-
-            // Script do Popper Reativo
-            IPSCSteelPopper popperScript = popperRoot.AddComponent<IPSCSteelPopper>();
-            SetFieldValue(popperScript, "targetName", name);
-            SetFieldValue(popperScript, "hingeTransform", hinge.transform);
-        }
-
-        private static void CreateWall(Transform parent, Vector3 pos, Vector3 scale, Material mat)
-        {
-            GameObject wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            wall.name = "Safety_Wall";
-            wall.transform.SetParent(parent);
-            wall.transform.position = pos;
-            wall.transform.localScale = scale;
-            wall.GetComponent<MeshRenderer>().material = mat;
         }
 
         private static void CreateShootingBox(Transform parent, Vector3 center, Material mat)
@@ -341,6 +893,56 @@ namespace IPSCSimulator.Setup
             rip.transform.localScale = scale;
             rip.GetComponent<MeshRenderer>().material = mat;
             Object.DestroyImmediate(rip.GetComponent<Collider>());
+        }
+
+        private static void CreateShootingBench(Transform parent, Vector3 pos, Material woodMat)
+        {
+            GameObject bench = new GameObject("Safety_Area_Bench");
+            bench.transform.SetParent(parent);
+            bench.transform.position = pos;
+
+            GameObject top = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            top.transform.SetParent(bench.transform);
+            top.transform.localPosition = new Vector3(0, 0.85f, 0);
+            top.transform.localScale = new Vector3(1.4f, 0.08f, 0.75f);
+            top.GetComponent<MeshRenderer>().material = woodMat;
+        }
+
+        private static void CreateSteelPopper(Transform parent, string name, Vector3 pos, Material mat)
+        {
+            GameObject popperRoot = new GameObject(name);
+            popperRoot.transform.SetParent(parent);
+            popperRoot.transform.position = pos;
+
+            GameObject basePlate = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            basePlate.name = "Popper_Base";
+            basePlate.transform.SetParent(popperRoot.transform);
+            basePlate.transform.localPosition = new Vector3(0f, 0.04f, 0f);
+            basePlate.transform.localScale = new Vector3(0.45f, 0.08f, 0.55f);
+            basePlate.GetComponent<MeshRenderer>().material = mat;
+
+            GameObject hinge = new GameObject("Popper_Hinge");
+            hinge.transform.SetParent(popperRoot.transform);
+            hinge.transform.localPosition = new Vector3(0f, 0.08f, 0f);
+
+            GameObject pole = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            pole.name = "Popper_Body";
+            pole.transform.SetParent(hinge.transform);
+            pole.transform.localPosition = new Vector3(0f, 0.42f, 0f);
+            pole.transform.localScale = new Vector3(0.16f, 0.75f, 0.035f);
+            pole.GetComponent<MeshRenderer>().material = mat;
+
+            GameObject head = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            head.name = "Popper_Head";
+            head.transform.SetParent(hinge.transform);
+            head.transform.localPosition = new Vector3(0f, 0.85f, 0f);
+            head.transform.localScale = new Vector3(0.35f, 0.02f, 0.35f);
+            head.transform.localRotation = Quaternion.Euler(90f, 0, 0);
+            head.GetComponent<MeshRenderer>().material = mat;
+
+            IPSCSteelPopper popperScript = popperRoot.AddComponent<IPSCSteelPopper>();
+            SetFieldValue(popperScript, "targetName", name);
+            SetFieldValue(popperScript, "hingeTransform", hinge.transform);
         }
 
         private static GameObject CreateBulletHoleDecalObject()
@@ -388,16 +990,14 @@ namespace IPSCSimulator.Setup
             SetFieldValue(targetScript, "targetName", name);
             SetFieldValue(targetScript, "isNoShoot", isNoShoot);
 
-            // Suportes de ripa de madeira
+            // Suportes de ripas de madeira
             GameObject stickL = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            stickL.name = "Stick_Left";
             stickL.transform.SetParent(targetObj.transform);
             stickL.transform.localPosition = new Vector3(-0.18f, -0.5f, -0.02f);
             stickL.transform.localScale = new Vector3(0.04f, 1.4f, 0.04f);
             stickL.GetComponent<MeshRenderer>().material = woodMat;
 
             GameObject stickR = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            stickR.name = "Stick_Right";
             stickR.transform.SetParent(targetObj.transform);
             stickR.transform.localPosition = new Vector3(0.18f, -0.5f, -0.02f);
             stickR.transform.localScale = new Vector3(0.04f, 1.4f, 0.04f);
@@ -415,13 +1015,9 @@ namespace IPSCSimulator.Setup
             board.GetComponent<MeshRenderer>().material = targetMat;
             Object.DestroyImmediate(board.GetComponent<Collider>());
 
-            // Zona Alpha (Centro: 15cm x 32cm)
+            // Zonas Alpha, Charlie e Delta
             CreateTargetZone(targetObj.transform, "Zone_Alpha", Vector3.zero, new Vector3(0.15f, 0.32f, 0.02f), isNoShoot ? IPSCZoneType.NoShoot : IPSCZoneType.Alpha, targetScript);
-
-            // Zona Charlie (Intermediária: 30cm x 55cm)
             CreateTargetZone(targetObj.transform, "Zone_Charlie", Vector3.zero, new Vector3(0.30f, 0.55f, 0.02f), isNoShoot ? IPSCZoneType.NoShoot : IPSCZoneType.Charlie, targetScript);
-
-            // Zona Delta (Externa: 45cm x 75cm)
             CreateTargetZone(targetObj.transform, "Zone_Delta", Vector3.zero, new Vector3(0.45f, 0.75f, 0.02f), isNoShoot ? IPSCZoneType.NoShoot : IPSCZoneType.Delta, targetScript);
 
             return targetScript;
@@ -442,187 +1038,10 @@ namespace IPSCSimulator.Setup
             SetFieldValue(zone, "parentTarget", parentTarget);
         }
 
-        private static GameObject CreatePlayerWithDetailedWeapon(Transform parent, GameObject bulletPrefab, GameObject decalPrefab, Material matMetal, Material matSlide, Material matFiber, Material matBrass)
-        {
-            GameObject player = new GameObject("Player");
-            player.transform.SetParent(parent);
-            player.transform.position = new Vector3(0f, 1.0f, 0f);
-
-            CharacterController cc = player.AddComponent<CharacterController>();
-            cc.height = 1.8f;
-            cc.radius = 0.35f;
-            cc.center = new Vector3(0, 0.9f, 0);
-
-            PlayerController controller = player.AddComponent<PlayerController>();
-
-            // Câmera com FOV realista
-            GameObject camObj = new GameObject("PlayerCamera");
-            camObj.transform.SetParent(player.transform);
-            camObj.transform.localPosition = new Vector3(0f, 1.65f, 0f);
-            Camera cam = camObj.AddComponent<Camera>();
-            camObj.tag = "MainCamera";
-            camObj.AddComponent<AudioListener>();
-            cam.fieldOfView = 68f;
-            cam.nearClipPlane = 0.02f;
-
-            // Desativa câmeras antigas
-            Camera[] allCams = Object.FindObjectsByType<Camera>(FindObjectsSortMode.None);
-            foreach (Camera c in allCams)
-            {
-                if (c != cam && c != null) c.gameObject.SetActive(false);
-            }
-
-            SetFieldValue(controller, "playerCameraTransform", camObj.transform);
-
-            // Suporte da Arma
-            GameObject holder = new GameObject("WeaponHolder");
-            holder.transform.SetParent(camObj.transform);
-            holder.transform.localPosition = new Vector3(0.18f, -0.22f, 0.42f);
-
-            WeaponHandling handling = holder.AddComponent<WeaponHandling>();
-
-            // Pistola 3D Detalhada
-            GameObject pistol = new GameObject("Pistol_9mm_Tactical");
-            pistol.transform.SetParent(holder.transform);
-            pistol.transform.localPosition = Vector3.zero;
-            pistol.transform.localRotation = Quaternion.identity;
-
-            // Empunhadura / Grip ergonômico
-            GameObject grip = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            grip.name = "Pistol_Grip";
-            grip.transform.SetParent(pistol.transform);
-            grip.transform.localPosition = new Vector3(0f, -0.06f, -0.02f);
-            grip.transform.localScale = new Vector3(0.028f, 0.12f, 0.046f);
-            grip.transform.localRotation = Quaternion.Euler(18f, 0, 0);
-            grip.GetComponent<MeshRenderer>().material = matMetal;
-            Object.DestroyImmediate(grip.GetComponent<Collider>());
-
-            // Guarda-Mato (Trigger Guard)
-            GameObject guard = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            guard.name = "TriggerGuard";
-            guard.transform.SetParent(pistol.transform);
-            guard.transform.localPosition = new Vector3(0f, -0.03f, 0.035f);
-            guard.transform.localScale = new Vector3(0.018f, 0.035f, 0.045f);
-            guard.GetComponent<MeshRenderer>().material = matMetal;
-            Object.DestroyImmediate(guard.GetComponent<Collider>());
-
-            // Gatilho
-            GameObject trigger = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            trigger.name = "Trigger";
-            trigger.transform.SetParent(pistol.transform);
-            trigger.transform.localPosition = new Vector3(0f, -0.025f, 0.028f);
-            trigger.transform.localScale = new Vector3(0.008f, 0.02f, 0.012f);
-            trigger.GetComponent<MeshRenderer>().material = matSlide;
-            Object.DestroyImmediate(trigger.GetComponent<Collider>());
-
-            // Armação Superior (Frame Top)
-            GameObject frameTop = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            frameTop.name = "Frame_Top";
-            frameTop.transform.SetParent(pistol.transform);
-            frameTop.transform.localPosition = new Vector3(0f, 0.005f, 0.04f);
-            frameTop.transform.localScale = new Vector3(0.030f, 0.022f, 0.17f);
-            frameTop.GetComponent<MeshRenderer>().material = matMetal;
-            Object.DestroyImmediate(frameTop.GetComponent<Collider>());
-
-            // Ferrolho móvel (Slide com chanfros e ranhuras)
-            GameObject slide = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            slide.name = "Pistol_Slide";
-            slide.transform.SetParent(pistol.transform);
-            slide.transform.localPosition = new Vector3(0f, 0.026f, 0.04f);
-            slide.transform.localScale = new Vector3(0.031f, 0.028f, 0.18f);
-            slide.GetComponent<MeshRenderer>().material = matSlide;
-            Object.DestroyImmediate(slide.GetComponent<Collider>());
-
-            // Janela de Ejeção com estojo dourado visível
-            GameObject chamberCartridge = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            chamberCartridge.name = "Chamber_Brass";
-            chamberCartridge.transform.SetParent(slide.transform);
-            chamberCartridge.transform.localPosition = new Vector3(0.25f, 0.1f, -0.05f);
-            chamberCartridge.transform.localScale = new Vector3(0.2f, 0.12f, 0.2f);
-            chamberCartridge.transform.localRotation = Quaternion.Euler(90f, 0, 0);
-            chamberCartridge.GetComponent<MeshRenderer>().material = matBrass;
-            Object.DestroyImmediate(chamberCartridge.GetComponent<Collider>());
-
-            // Cano Cilindrico Frontal (Barrel Crown)
-            GameObject barrelCrown = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            barrelCrown.name = "Barrel_Crown";
-            barrelCrown.transform.SetParent(pistol.transform);
-            barrelCrown.transform.localPosition = new Vector3(0f, 0.022f, 0.135f);
-            barrelCrown.transform.localScale = new Vector3(0.016f, 0.02f, 0.016f);
-            barrelCrown.transform.localRotation = Quaternion.Euler(90f, 0, 0);
-            barrelCrown.GetComponent<MeshRenderer>().material = matMetal;
-            Object.DestroyImmediate(barrelCrown.GetComponent<Collider>());
-
-            // Aparelho de Pontaria: Massa de Mira (Front Sight com Fibra Ótica Vermelha)
-            GameObject frontSightBase = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            frontSightBase.name = "FrontSight_Blade";
-            frontSightBase.transform.SetParent(slide.transform);
-            frontSightBase.transform.localPosition = new Vector3(0f, 0.58f, 0.44f);
-            frontSightBase.transform.localScale = new Vector3(0.12f, 0.28f, 0.06f);
-            frontSightBase.GetComponent<MeshRenderer>().material = matMetal;
-            Object.DestroyImmediate(frontSightBase.GetComponent<Collider>());
-
-            GameObject fiberDot = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            fiberDot.name = "FiberOptic_RedDot";
-            fiberDot.transform.SetParent(frontSightBase.transform);
-            fiberDot.transform.localPosition = new Vector3(0f, 0.2f, 0f);
-            fiberDot.transform.localScale = new Vector3(0.4f, 0.7f, 0.4f);
-            fiberDot.transform.localRotation = Quaternion.Euler(90f, 0, 0);
-            fiberDot.GetComponent<MeshRenderer>().material = matFiber;
-            Object.DestroyImmediate(fiberDot.GetComponent<Collider>());
-
-            // Alça de Mira Traseira em U (Rear Sight)
-            GameObject rearSightL = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            rearSightL.name = "RearSight_Left";
-            rearSightL.transform.SetParent(slide.transform);
-            rearSightL.transform.localPosition = new Vector3(-0.24f, 0.58f, -0.44f);
-            rearSightL.transform.localScale = new Vector3(0.18f, 0.30f, 0.06f);
-            rearSightL.GetComponent<MeshRenderer>().material = matMetal;
-            Object.DestroyImmediate(rearSightL.GetComponent<Collider>());
-
-            GameObject rearSightR = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            rearSightR.name = "RearSight_Right";
-            rearSightR.transform.SetParent(slide.transform);
-            rearSightR.transform.localPosition = new Vector3(0.24f, 0.58f, -0.44f);
-            rearSightR.transform.localScale = new Vector3(0.18f, 0.30f, 0.06f);
-            rearSightR.GetComponent<MeshRenderer>().material = matMetal;
-            Object.DestroyImmediate(rearSightR.GetComponent<Collider>());
-
-            // Cano (Muzzle Point balístico com Height-Over-Bore)
-            GameObject muzzle = new GameObject("MuzzlePoint");
-            muzzle.transform.SetParent(pistol.transform);
-            muzzle.transform.localPosition = new Vector3(0f, 0.022f, 0.145f);
-
-            // Componente Weapon
-            Weapon weapon = pistol.AddComponent<Weapon>();
-            AudioSource weaponAudio = pistol.AddComponent<AudioSource>();
-            weaponAudio.playOnAwake = false;
-
-            SetFieldValue(weapon, "muzzlePoint", muzzle.transform);
-            SetFieldValue(weapon, "bulletPrefab", bulletPrefab);
-            SetFieldValue(weapon, "bulletHoleDecalPrefab", decalPrefab);
-            SetFieldValue(weapon, "slideTransform", slide.transform);
-            SetFieldValue(weapon, "audioSource", weaponAudio);
-            SetFieldValue(weapon, "fireSound", ProceduralAudio.CreateGunshotClip());
-            SetFieldValue(weapon, "dryFireSound", ProceduralAudio.CreateDryFireClip());
-            SetFieldValue(weapon, "slideLockSound", ProceduralAudio.CreateSlideLockClip());
-
-            // Configura WeaponHandling (ADS perfeitamente alinhado com a massa de mira de fibra ótica)
-            SetFieldValue(handling, "weapon", weapon);
-            SetFieldValue(handling, "weaponTransform", holder.transform);
-            SetFieldValue(handling, "hipPosition", new Vector3(0.18f, -0.22f, 0.42f));
-            SetFieldValue(handling, "adsPosition", new Vector3(0f, -0.0465f, 0.32f));
-
-            return player;
-        }
-
         private static void SetFieldValue(object target, string fieldName, object value)
         {
             var field = target.GetType().GetField(fieldName, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
-            if (field != null)
-            {
-                field.SetValue(target, value);
-            }
+            if (field != null) field.SetValue(target, value);
         }
     }
 }

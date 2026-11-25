@@ -36,6 +36,70 @@ namespace IPSCSimulator.Utilities
         }
 
         /// <summary>
+        /// Textura de concreto industrial polido para estande indoor e armazém estilo CS.
+        /// </summary>
+        public static Texture2D CreateConcreteTexture()
+        {
+            int size = 512;
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGB24, true);
+            Color[] pixels = new Color[size * size];
+
+            Color darkGray = new Color(0.28f, 0.28f, 0.30f);
+            Color lightGray = new Color(0.42f, 0.42f, 0.44f);
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float u = (float)x / size;
+                    float v = (float)y / size;
+                    float n = Mathf.PerlinNoise(u * 8f, v * 8f) * 0.7f + Mathf.PerlinNoise(u * 30f, v * 30f) * 0.3f;
+                    Color c = Color.Lerp(darkGray, lightGray, n);
+                    float noise = Random.Range(-0.03f, 0.03f);
+                    c.r = Mathf.Clamp01(c.r + noise);
+                    c.g = Mathf.Clamp01(c.g + noise);
+                    c.b = Mathf.Clamp01(c.b + noise);
+                    pixels[y * size + x] = c;
+                }
+            }
+            tex.SetPixels(pixels);
+            tex.Apply();
+            return tex;
+        }
+
+        /// <summary>
+        /// Textura de caixa de suprimento militar estilo CS (Madeira verde militar com reforços).
+        /// </summary>
+        public static Texture2D CreateMilitaryCrateTexture()
+        {
+            int size = 256;
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGB24, true);
+            Color[] pixels = new Color[size * size];
+
+            Color woodColor = new Color(0.38f, 0.42f, 0.28f);
+            Color frameColor = new Color(0.18f, 0.20f, 0.15f);
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    bool isBorder = (x < 16 || x > size - 16 || y < 16 || y > size - 16);
+                    bool isDiagonal = (Mathf.Abs(x - y) < 8 || Mathf.Abs((size - x) - y) < 8);
+
+                    Color c = (isBorder || isDiagonal) ? frameColor : woodColor;
+                    float noise = Random.Range(-0.02f, 0.02f);
+                    c.r = Mathf.Clamp01(c.r + noise);
+                    c.g = Mathf.Clamp01(c.g + noise);
+                    c.b = Mathf.Clamp01(c.b + noise);
+                    pixels[y * size + x] = c;
+                }
+            }
+            tex.SetPixels(pixels);
+            tex.Apply();
+            return tex;
+        }
+
+        /// <summary>
         /// Textura realista de chão de estande de tiro (areia, cascalho moído e pequenas pedras).
         /// </summary>
         public static Texture2D CreateGravelTexture()

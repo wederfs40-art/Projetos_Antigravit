@@ -45,6 +45,16 @@ namespace IPSCSimulator.Weapons
         public int MagazineCapacity => magazineCapacity;
         public bool IsSlideLocked => _isSlideLocked;
 
+        public void ConfigureWeapon(int capacity, float velocity, float gravity = 1f)
+        {
+            magazineCapacity = capacity;
+            currentAmmo = capacity;
+            muzzleVelocity = velocity;
+            gravityMultiplier = gravity;
+            _isSlideLocked = false;
+            OnAmmoChanged?.Invoke(currentAmmo, magazineCapacity);
+        }
+
         private void Awake()
         {
             if (slideTransform != null)

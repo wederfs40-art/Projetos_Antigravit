@@ -7,75 +7,57 @@ using System.IO;
 
 namespace IPSCSimulator.EditorTools
 {
+    using IPSCSimulator.Match;
     using IPSCSimulator.Setup;
 
     /// <summary>
-    /// Adiciona menus no Unity Editor para montar o estande de tiro completo
-    /// de alta fidelidade e importar com 1 clique os modelos 3D baixados da Asset Store.
+    /// Menus no Unity Editor para montar qualquer um dos cenários 3D instantaneamente
+    /// e abrir o Menu Principal do Simulador.
     /// </summary>
     public static class IPSCSceneBuilder
     {
-        [MenuItem("IPSC Simulator/Montar Pista Completa (Alta Fidelidade)", false, 1)]
-        public static void BuildSceneFromMenu()
+        [MenuItem("IPSC Simulator/Montar Menu Principal & Simulador", false, 1)]
+        public static void BuildMainMenu()
         {
-            if (EditorUtility.DisplayDialog(
-                "Montador de Pista IPSC Realista",
-                "Deseja gerar o estande de tiro de alta fidelidade visual?\n\nInclui:\n- Chão PBR de cascalho e areia\n- Barris táticos (55 galões)\n- Biombos de madeira\n- Bancada de segurança com estojos e caixas de munição\n- Alvos de papelão e Alvos Metálicos Reativos (Poppers)\n- Pistola 3D detalhada com miras de fibra ótica\n- Iluminação solar com sombras suaves e atmosfera",
-                "Sim, Montar Pista!",
-                "Cancelar"))
-            {
-                SceneGeneratorCore.GenerateCompleteShootingRange();
-                EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
-                EditorUtility.DisplayDialog("Sucesso!", "Estande de tiro IPSC de alta fidelidade montado na cena!\n\nAperte PLAY para atirar e 'T' para iniciar o Shot Timer.", "OK");
-            }
+            SceneGeneratorCore.BuildSelectedEnvironment(GameEnvironmentType.IPSC_Outdoor_Short, SelectedWeaponType.Pistol_9mm);
+            if (TacticalGameManager.Instance != null) TacticalGameManager.Instance.ReturnToMainMenu();
+            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+            EditorUtility.DisplayDialog("Menu Principal Pronto", "Menu Principal carregado! Dê PLAY para escolher entre Pistas IPSC, Estande Indoor ou Armazém estilo CS!", "OK");
         }
 
-        [MenuItem("IPSC Simulator/Importar Armas da Asset Store/Importar Dan Wesson 715 (147MB - Arma Ultra Realista)", false, 10)]
-        public static void ImportDanWessonPackage()
+        [MenuItem("IPSC Simulator/Cenários Diretos/1. Pista Curta IPSC (Speed Option)", false, 20)]
+        public static void BuildIPSCShort()
         {
-            string pkgPath = @"C:\Users\Silvio\AppData\Roaming\Unity\Asset Store-5.x\MyNameIsVoo\3D ModelsPropsWeapons\Dan Wesson Model 715.unitypackage";
-            ImportLocalPackage(pkgPath, "Dan Wesson Model 715 (Ultra Realista)");
+            SceneGeneratorCore.BuildSelectedEnvironment(GameEnvironmentType.IPSC_Outdoor_Short, SelectedWeaponType.Pistol_9mm);
+            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         }
 
-        [MenuItem("IPSC Simulator/Importar Armas da Asset Store/Importar Low Poly Pistol Pack 1", false, 11)]
-        public static void ImportPistolPack1()
+        [MenuItem("IPSC Simulator/Cenários Diretos/2. Pista Média IPSC (Labirinto Tático)", false, 21)]
+        public static void BuildIPSCMedium()
         {
-            string pkgPath = @"C:\Users\Silvio\AppData\Roaming\Unity\Asset Store-5.x\CASTLE BRAVO\3D ModelsPropsWeaponsGuns\Low Poly Pistol Weapon Pack 1.unitypackage";
-            ImportLocalPackage(pkgPath, "Low Poly Pistol Weapon Pack 1");
+            SceneGeneratorCore.BuildSelectedEnvironment(GameEnvironmentType.IPSC_Outdoor_Medium, SelectedWeaponType.Pistol_9mm);
+            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         }
 
-        [MenuItem("IPSC Simulator/Importar Armas da Asset Store/Importar Low Poly Pistol Pack 2", false, 12)]
-        public static void ImportPistolPack2()
+        [MenuItem("IPSC Simulator/Cenários Diretos/3. Pista Longa IPSC (Torneio 30m)", false, 22)]
+        public static void BuildIPSCLong()
         {
-            string pkgPath = @"C:\Users\Silvio\AppData\Roaming\Unity\Asset Store-5.x\CASTLE BRAVO\3D ModelsPropsWeaponsGuns\Low Poly Pistol Weapon Pack 2.unitypackage";
-            ImportLocalPackage(pkgPath, "Low Poly Pistol Weapon Pack 2");
+            SceneGeneratorCore.BuildSelectedEnvironment(GameEnvironmentType.IPSC_Outdoor_Long, SelectedWeaponType.Pistol_9mm);
+            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         }
 
-        [MenuItem("IPSC Simulator/Importar Armas da Asset Store/Importar Low Poly Pistol Pack 3", false, 13)]
-        public static void ImportPistolPack3()
+        [MenuItem("IPSC Simulator/Cenários Diretos/4. Estande Indoor de Precisão (Cabines 10m-25m)", false, 23)]
+        public static void BuildIndoor()
         {
-            string pkgPath = @"C:\Users\Silvio\AppData\Roaming\Unity\Asset Store-5.x\CASTLE BRAVO\3D ModelsPropsWeaponsGuns\Low Poly Pistol Weapon Pack 3.unitypackage";
-            ImportLocalPackage(pkgPath, "Low Poly Pistol Weapon Pack 3");
+            SceneGeneratorCore.BuildSelectedEnvironment(GameEnvironmentType.Indoor_Precision_Stand, SelectedWeaponType.Pistol_9mm);
+            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         }
 
-        [MenuItem("IPSC Simulator/Importar Armas da Asset Store/Importar SMG Weapon Pack", false, 14)]
-        public static void ImportSmgPack()
+        [MenuItem("IPSC Simulator/Cenários Diretos/5. Armazém Tático CQB (Estilo Counter-Strike)", false, 24)]
+        public static void BuildCSKillhouse()
         {
-            string pkgPath = @"C:\Users\Silvio\AppData\Roaming\Unity\Asset Store-5.x\CASTLE BRAVO\3D ModelsPropsWeaponsGuns\Low Poly SMG Weapon Pack 2.unitypackage";
-            ImportLocalPackage(pkgPath, "Low Poly SMG Weapon Pack 2");
-        }
-
-        private static void ImportLocalPackage(string path, string packageName)
-        {
-            if (File.Exists(path))
-            {
-                Debug.Log($"[Asset Store Import] Importando pacote '{packageName}' de: {path}");
-                AssetDatabase.ImportPackage(path, true); // true abre o popup para o usuário confirmar e importar
-            }
-            else
-            {
-                EditorUtility.DisplayDialog("Arquivo não encontrado", $"Não foi possível localizar o pacote '{packageName}' no caminho:\n{path}", "OK");
-            }
+            SceneGeneratorCore.BuildSelectedEnvironment(GameEnvironmentType.Tactical_CS_Killhouse, SelectedWeaponType.SMG_Tactical);
+            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         }
     }
 }

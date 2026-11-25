@@ -41,8 +41,21 @@ namespace IPSCSimulator.Weapons
         private Vector3 _currentRecoilRotation;
         private Vector3 _targetRecoilRotation;
 
+        [Header("Disparo e Cadência")]
+        [SerializeField] private bool isAutomatic = false;
+        [SerializeField] private float fireRate = 0.11f; // ~550 disparos por minuto para SMG
+        private float _lastFireTime = 0f;
+
         public bool IsAiming => _isAiming;
         public bool IsHoldingBreath => _isHoldingBreath;
+
+        public void ConfigureHandling(bool auto, float recoilMult, Vector3 adsPos)
+        {
+            isAutomatic = auto;
+            adsPosition = adsPos;
+            recoilKickPosition *= recoilMult;
+            recoilKickRotation *= recoilMult;
+        }
 
         private void OnEnable()
         {
@@ -70,10 +83,24 @@ namespace IPSCSimulator.Weapons
             // Shift esquerdo: Prende a respiração para estabilizar a mira
             _isHoldingBreath = Input.GetKey(KeyCode.LeftShift);
 
-            // Botão esquerdo: Disparo
-            if (Input.GetMouseButtonDown(0) && weapon != null)
+            // Botão esquerdo: Disparo (Semi-Automático ou Automático Contínuo para SMG)
+            if (weapon != null)
             {
-                weapon.TryFire();
+                if (isAutomatic)
+                {
+                    if (Input.GetMouseButton(0) && Time.time >= _lastFireTime + fireRate)
+                    {
+                        _lastFireTime = Time.time;
+                        weapon.TryFire();
+                    }
+                }
+                else
+                {
+                    if (Input.GetMouseButtonDown(0))
+                    {
+                        weapon.TryFire();
+                    }
+                }
             }
 
             // Tecla R: Recarregar
