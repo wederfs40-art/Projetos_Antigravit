@@ -845,8 +845,22 @@ namespace IPSCSimulator.Setup
             SetFieldValue(handling, "weaponTransform", holder.transform);
             SetFieldValue(handling, "hipPosition", hipPos);
 
-            // Anexa os braços e luvas táticas em 1ª pessoa (FPS Hands)
-            AttachTacticalHands(holder, weaponType);
+            // Anexa os sistemas avançados: Movimentação Procedural (Sway/Bobbing), Ciclos Mecânicos (Inspect/Bolt) e Braços com IK
+            ProceduralViewmodelMotion motion = holder.GetComponent<ProceduralViewmodelMotion>();
+            if (motion == null) motion = holder.AddComponent<ProceduralViewmodelMotion>();
+            motion.ConfigureStancePositions(hipPos, adsPos);
+
+            TacticalWeaponCycles cycles = holder.GetComponent<TacticalWeaponCycles>();
+            if (cycles == null) cycles = holder.AddComponent<TacticalWeaponCycles>();
+            cycles.BindTransforms(weapon, slideObj, magObj, motion);
+
+            // Rigging e Two-Bone IK de Braços Táticos Articulados com Materiais PBR
+            TacticalViewmodelArms arms = holder.transform.parent.GetComponentInChildren<TacticalViewmodelArms>();
+            if (arms == null) arms = holder.transform.parent.gameObject.AddComponent<TacticalViewmodelArms>();
+            arms.InitializeArms(holder.transform,
+                PBRMaterialFactory.CreateTacticalCamoPBRMaterial(),
+                PBRMaterialFactory.CreateCombatGlovePBRMaterial(),
+                PBRMaterialFactory.CreateGunSteelPBRMaterial(new Color(0.12f, 0.12f, 0.14f)));
         }
 
         /// <summary>
@@ -1148,26 +1162,7 @@ namespace IPSCSimulator.Setup
         // =========================================================================
         private static void SetupSunLighting(bool warm)
         {
-            Light sun = Object.FindAnyObjectByType<Light>();
-            if (sun == null)
-            {
-                GameObject sunObj = new GameObject("Directional_Sun");
-                sun = sunObj.AddComponent<Light>();
-                sun.type = LightType.Directional;
-            }
-
-            sun.transform.rotation = Quaternion.Euler(42f, -38f, 0f);
-            sun.color = warm ? new Color(1.0f, 0.96f, 0.88f) : Color.white;
-            sun.intensity = 1.35f;
-            sun.shadows = LightShadows.Soft;
-            sun.shadowResolution = UnityEngine.Rendering.LightShadowResolution.VeryHigh;
-            sun.shadowBias = 0.04f;
-            sun.shadowNormalBias = 0.35f;
-
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.68f, 0.80f, 0.96f);
-            RenderSettings.ambientEquatorColor = new Color(0.72f, 0.68f, 0.62f);
-            RenderSettings.ambientGroundColor = new Color(0.40f, 0.34f, 0.26f);
+            CinematicLightingSetup.ApplyCinematicLighting(null, new Vector3(42f, -38f, 0f), warm ? 1.35f : 1.15f);
 
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Exponential;
