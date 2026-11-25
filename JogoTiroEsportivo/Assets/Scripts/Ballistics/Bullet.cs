@@ -32,7 +32,7 @@ namespace IPSCSimulator.Ballistics
             _previousPosition = transform.position;
             _gravityMultiplier = gravityMultiplier;
             _decalPrefab = decalPrefab;
-            _hitLayers = hitLayers;
+            _hitLayers = (hitLayers.value == 0) ? (LayerMask)(~0) : hitLayers;
         }
 
         private void Update()

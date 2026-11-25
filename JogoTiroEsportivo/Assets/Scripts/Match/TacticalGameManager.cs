@@ -101,6 +101,22 @@ namespace IPSCSimulator.Match
             }
         }
 
+        public void ChangeWeaponInGame(SelectedWeaponType newWeapon)
+        {
+            if (SelectedWeapon == newWeapon) return;
+            SelectedWeapon = newWeapon;
+            SceneGeneratorCore.SwitchEquippedWeapon(newWeapon);
+        }
+
+        public void CycleWeapon(int direction)
+        {
+            int current = (int)SelectedWeapon;
+            int count = System.Enum.GetValues(typeof(SelectedWeaponType)).Length;
+            current = (current + direction) % count;
+            if (current < 0) current += count;
+            ChangeWeaponInGame((SelectedWeaponType)current);
+        }
+
         public void RestartCurrentMap()
         {
             StartGame(SelectedEnvironment, SelectedWeapon);

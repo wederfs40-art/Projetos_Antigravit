@@ -1,33 +1,39 @@
 using System;
+using System.Collections;
 using UnityEngine;
 
 namespace IPSCSimulator.Weapons
 {
     using IPSCSimulator.Ballistics;
+    using IPSCSimulator.Utilities;
 
     /// <summary>
-    /// Controla o disparo mecânico, câmara, cano, munição e ferrolho da arma.
-    /// Instancia a bala na ponta do cano (Height Over Bore real).
+    /// Controla o disparo mecânico, câmara, cano, munição, ferrolho,
+    /// ejeção física de cápsulas de latão e animação de troca de carregador (magazine).
     /// </summary>
     public class Weapon : MonoBehaviour
     {
         [Header("Balística e Muzzle Point")]
         [Tooltip("Ponta do cano onde a bala nasce fisicamente (Height Over Bore).")]
         [SerializeField] private Transform muzzlePoint;
+        [SerializeField] private Transform ejectionPort;
         [SerializeField] private GameObject bulletPrefab;
         [SerializeField] private GameObject bulletHoleDecalPrefab;
         [Tooltip("Velocidade de saída do cano em metros por segundo.")]
         [SerializeField] private float muzzleVelocity = 380f; // 9mm padrão (360-390 m/s)
         [SerializeField] private float gravityMultiplier = 1f;
-        [SerializeField] private LayerMask hitLayers;
+        [SerializeField] private LayerMask hitLayers = ~0; // Garante que atinge todas as camadas
 
         [Header("Capacidade e Ferrolho")]
         [SerializeField] private int magazineCapacity = 17;
         [SerializeField] private int currentAmmo = 17;
         [SerializeField] private Transform slideTransform;
-        [SerializeField] private Vector3 slideLockedLocalPosition = new Vector3(0, 0, -0.04f); // Recuo do ferrolho
+        [SerializeField] private Transform magazineTransform;
+        [SerializeField] private Vector3 slideLockedLocalPosition = new Vector3(0, 0, -0.04f);
         private Vector3 _slideOriginalLocalPosition;
+        private Vector3 _magOriginalLocalPosition;
         private bool _isSlideLocked = false;
+        private bool _isReloading = false;
 
         [Header("Efeitos Sonoros e Visuais")]
         [SerializeField] private AudioSource audioSource;
@@ -37,6 +43,10 @@ namespace IPSCSimulator.Weapons
         [SerializeField] private AudioClip reloadSound;
         [SerializeField] private ParticleSystem muzzleFlash;
 
+        private Light _muzzleLight;
+        private Coroutine _flashCoroutine;
+        private Coroutine _reloadCoroutine;
+
         // Eventos públicos
         public static event Action OnWeaponFired;
         public static event Action<int, int> OnAmmoChanged; // (current, max)
@@ -44,6 +54,7 @@ namespace IPSCSimulator.Weapons
         public int CurrentAmmo => currentAmmo;
         public int MagazineCapacity => magazineCapacity;
         public bool IsSlideLocked => _isSlideLocked;
+        public bool IsReloading => _isReloading;
 
         public void ConfigureWeapon(int capacity, float velocity, float gravity = 1f)
         {
@@ -52,6 +63,7 @@ namespace IPSCSimulator.Weapons
             muzzleVelocity = velocity;
             gravityMultiplier = gravity;
             _isSlideLocked = false;
+            _isReloading = false;
             OnAmmoChanged?.Invoke(currentAmmo, magazineCapacity);
         }
 
@@ -59,6 +71,23 @@ namespace IPSCSimulator.Weapons
         {
             if (slideTransform != null)
                 _slideOriginalLocalPosition = slideTransform.localPosition;
+
+            if (magazineTransform != null)
+                _magOriginalLocalPosition = magazineTransform.localPosition;
+
+            // Cria luz pontual de clarão de disparo (Muzzle Flash Dynamic Light)
+            if (muzzlePoint != null)
+            {
+                GameObject lightObj = new GameObject("MuzzleFlash_Light");
+                lightObj.transform.SetParent(muzzlePoint);
+                lightObj.transform.localPosition = Vector3.zero;
+                _muzzleLight = lightObj.AddComponent<Light>();
+                _muzzleLight.type = LightType.Point;
+                _muzzleLight.color = new Color(1f, 0.78f, 0.35f);
+                _muzzleLight.range = 5.5f;
+                _muzzleLight.intensity = 4.0f;
+                _muzzleLight.enabled = false;
+            }
         }
 
         private void Start()
@@ -71,10 +100,13 @@ namespace IPSCSimulator.Weapons
         /// </summary>
         public bool TryFire()
         {
+            if (_isReloading) return false;
+
             // Se a arma estiver vazia ou com o ferrolho travado aberto
             if (currentAmmo <= 0 || _isSlideLocked)
             {
                 PlayDryFire();
+                StartReload(); // Tenta recarregar automaticamente se clicou no seco
                 return false;
             }
 
@@ -93,20 +125,67 @@ namespace IPSCSimulator.Weapons
                 }
             }
 
-            // 3. Efeitos visuais e sonoros
+            // 3. Efeitos visuais e sonoros de disparo
             if (muzzleFlash != null) muzzleFlash.Play();
+            TriggerMuzzleFlashLight();
             if (audioSource != null && fireSound != null) audioSource.PlayOneShot(fireSound);
 
-            // 4. Notifica o sistema de Timer e o manuseio de recuo
+            // 4. Ejeção física da cápsula de latão
+            EjectBrassCasing();
+
+            // 5. Notifica o sistema de Timer e o manuseio de recuo
             OnWeaponFired?.Invoke();
 
-            // 5. Verifica se foi o último tiro para travar o ferrolho aberto (Slide Lock)
+            // 6. Verifica se foi o último tiro para travar o ferrolho aberto (Slide Lock)
             if (currentAmmo == 0)
             {
                 LockSlideOpen();
             }
 
             return true;
+        }
+
+        private void TriggerMuzzleFlashLight()
+        {
+            if (_muzzleLight != null)
+            {
+                if (_flashCoroutine != null) StopCoroutine(_flashCoroutine);
+                _flashCoroutine = StartCoroutine(FlashLightCoroutine());
+            }
+        }
+
+        private IEnumerator FlashLightCoroutine()
+        {
+            _muzzleLight.enabled = true;
+            yield return new WaitForSeconds(0.04f);
+            _muzzleLight.enabled = false;
+        }
+
+        /// <summary>
+        /// Instancia um estojo de latão ejetado com impulso físico e rotação angular realista.
+        /// </summary>
+        private void EjectBrassCasing()
+        {
+            Vector3 spawnPos = (ejectionPort != null) ? ejectionPort.position : (transform.position + transform.right * 0.06f + transform.up * 0.03f + transform.forward * 0.05f);
+            GameObject casing = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            casing.name = "Spent_Brass_Casing";
+            casing.transform.position = spawnPos;
+            casing.transform.localScale = new Vector3(0.010f, 0.016f, 0.010f);
+            casing.transform.rotation = UnityEngine.Random.rotation;
+
+            Material brassMat = ProceduralMaterials.CreateMaterial(new Color(0.92f, 0.78f, 0.28f), "Mat_Brass_Casing", 0.9f, 0.95f);
+            casing.GetComponent<MeshRenderer>().material = brassMat;
+
+            // Física realista de arremesso lateral
+            Rigidbody rb = casing.AddComponent<Rigidbody>();
+            rb.mass = 0.012f;
+            Vector3 ejectDir = (transform.right * UnityEngine.Random.Range(2.2f, 3.4f)) + 
+                              (transform.up * UnityEngine.Random.Range(1.2f, 2.0f)) - 
+                              (transform.forward * UnityEngine.Random.Range(0.2f, 0.6f));
+            rb.linearVelocity = ejectDir;
+            rb.angularVelocity = new Vector3(UnityEngine.Random.Range(-30f, 30f), UnityEngine.Random.Range(-30f, 30f), UnityEngine.Random.Range(-30f, 30f));
+
+            Destroy(casing, 3.5f);
         }
 
         private void LockSlideOpen()
@@ -123,21 +202,88 @@ namespace IPSCSimulator.Weapons
         }
 
         /// <summary>
-        /// Recarrega a arma e destrava o ferrolho.
+        /// Inicia a animação tática física de recarregamento da arma.
         /// </summary>
+        public void StartReload()
+        {
+            if (_isReloading || currentAmmo == magazineCapacity) return;
+            if (_reloadCoroutine != null) StopCoroutine(_reloadCoroutine);
+            _reloadCoroutine = StartCoroutine(ReloadAnimationCoroutine());
+        }
+
         public void Reload()
         {
-            currentAmmo = magazineCapacity;
-            _isSlideLocked = false;
+            StartReload();
+        }
+
+        private IEnumerator ReloadAnimationCoroutine()
+        {
+            _isReloading = true;
+
+            // 1. Som e movimento de soltar o carregador (Magazine Out)
+            if (audioSource != null)
+            {
+                audioSource.PlayOneShot(ProceduralAudio.CreateMagOutClip());
+            }
+
+            if (magazineTransform != null)
+            {
+                float t = 0f;
+                while (t < 0.25f)
+                {
+                    t += Time.deltaTime;
+                    magazineTransform.localPosition = _magOriginalLocalPosition + new Vector3(0, -Mathf.Lerp(0f, 0.18f, t / 0.25f), 0);
+                    yield return null;
+                }
+            }
+            else
+            {
+                yield return new WaitForSeconds(0.25f);
+            }
+
+            yield return new WaitForSeconds(0.25f);
+
+            // 2. Novo carregador inserido e travado no poço (Magazine In)
+            if (audioSource != null)
+            {
+                audioSource.PlayOneShot(ProceduralAudio.CreateMagInClip());
+            }
+
+            if (magazineTransform != null)
+            {
+                float t = 0f;
+                while (t < 0.25f)
+                {
+                    t += Time.deltaTime;
+                    magazineTransform.localPosition = _magOriginalLocalPosition + new Vector3(0, -Mathf.Lerp(0.18f, 0f, t / 0.25f), 0);
+                    yield return null;
+                }
+                magazineTransform.localPosition = _magOriginalLocalPosition;
+            }
+            else
+            {
+                yield return new WaitForSeconds(0.25f);
+            }
+
+            yield return new WaitForSeconds(0.2f);
+
+            // 3. Ferrolho puxado e liberado (Slide Rack)
+            if (audioSource != null)
+            {
+                audioSource.PlayOneShot(ProceduralAudio.CreateSlideRackClip());
+            }
+
             if (slideTransform != null)
             {
                 slideTransform.localPosition = _slideOriginalLocalPosition;
             }
-            if (audioSource != null && reloadSound != null)
-            {
-                audioSource.PlayOneShot(reloadSound);
-            }
+
+            _isSlideLocked = false;
+            currentAmmo = magazineCapacity;
             OnAmmoChanged?.Invoke(currentAmmo, magazineCapacity);
+
+            yield return new WaitForSeconds(0.15f);
+            _isReloading = false;
         }
 
         private void PlayDryFire()

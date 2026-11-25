@@ -138,5 +138,121 @@ namespace IPSCSimulator.Utilities
             clip.SetData(samples, 0);
             return clip;
         }
+
+        /// <summary>
+        /// Som mecânico de carregador (magazine) destravando e saindo da arma.
+        /// </summary>
+        public static AudioClip CreateMagOutClip()
+        {
+            int sampleRate = 44100;
+            float duration = 0.22f;
+            int sampleCount = Mathf.FloorToInt(sampleRate * duration);
+            float[] samples = new float[sampleCount];
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                float t = (float)i / sampleRate;
+                float click1 = Mathf.Sin(2 * Mathf.PI * 1200f * t) * Mathf.Exp(-t * 60f);
+                float scrape = (Random.value * 2f - 1f) * 0.4f * Mathf.Exp(-t * 25f);
+                samples[i] = Mathf.Clamp(click1 * 0.6f + scrape, -1f, 1f);
+            }
+
+            AudioClip clip = AudioClip.Create("Mag_Out_Click", sampleCount, 1, sampleRate, false);
+            clip.SetData(samples, 0);
+            return clip;
+        }
+
+        /// <summary>
+        /// Som de carregador novo sendo inserido e travado no poço da empunhadura (slap).
+        /// </summary>
+        public static AudioClip CreateMagInClip()
+        {
+            int sampleRate = 44100;
+            float duration = 0.28f;
+            int sampleCount = Mathf.FloorToInt(sampleRate * duration);
+            float[] samples = new float[sampleCount];
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                float t = (float)i / sampleRate;
+                float thud = Mathf.Sin(2 * Mathf.PI * 180f * t) * Mathf.Exp(-t * 30f) * 0.8f;
+                float click = Mathf.Sin(2 * Mathf.PI * 1650f * t) * Mathf.Exp(-t * 75f) * 0.7f;
+                float scrape = (Random.value * 2f - 1f) * 0.35f * Mathf.Exp(-t * 40f);
+                samples[i] = Mathf.Clamp(thud + click + scrape, -1f, 1f);
+            }
+
+            AudioClip clip = AudioClip.Create("Mag_In_Slap", sampleCount, 1, sampleRate, false);
+            clip.SetData(samples, 0);
+            return clip;
+        }
+
+        /// <summary>
+        /// Som de ferrolho sendo puxado e solto batendo na câmara (slide rack).
+        /// </summary>
+        public static AudioClip CreateSlideRackClip()
+        {
+            int sampleRate = 44100;
+            float duration = 0.32f;
+            int sampleCount = Mathf.FloorToInt(sampleRate * duration);
+            float[] samples = new float[sampleCount];
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                float t = (float)i / sampleRate;
+                float rackBack = Mathf.Sin(2 * Mathf.PI * 980f * t) * Mathf.Exp(-t * 25f);
+                float slam = (t > 0.12f) ? Mathf.Sin(2 * Mathf.PI * 1350f * (t - 0.12f)) * Mathf.Exp(-(t - 0.12f) * 50f) * 0.85f : 0f;
+                float metal = (Random.value * 2f - 1f) * 0.3f * Mathf.Exp(-t * 20f);
+                samples[i] = Mathf.Clamp(rackBack * 0.5f + slam + metal, -1f, 1f);
+            }
+
+            AudioClip clip = AudioClip.Create("Slide_Rack", sampleCount, 1, sampleRate, false);
+            clip.SetData(samples, 0);
+            return clip;
+        }
+
+        /// <summary>
+        /// Som agudo de estojo de latão ejetado quicando no chão.
+        /// </summary>
+        public static AudioClip CreateCasingBounceClip()
+        {
+            int sampleRate = 44100;
+            float duration = 0.20f;
+            int sampleCount = Mathf.FloorToInt(sampleRate * duration);
+            float[] samples = new float[sampleCount];
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                float t = (float)i / sampleRate;
+                float clink = (Mathf.Sin(2 * Mathf.PI * 3800f * t) + Mathf.Sin(2 * Mathf.PI * 5200f * t) * 0.5f) * Mathf.Exp(-t * 45f);
+                samples[i] = clink * 0.35f;
+            }
+
+            AudioClip clip = AudioClip.Create("Casing_Bounce", sampleCount, 1, sampleRate, false);
+            clip.SetData(samples, 0);
+            return clip;
+        }
+
+        /// <summary>
+        /// Som de perfuração abafada da bala rasgando o papelão IPSC.
+        /// </summary>
+        public static AudioClip CreateCardboardImpactClip()
+        {
+            int sampleRate = 44100;
+            float duration = 0.15f;
+            int sampleCount = Mathf.FloorToInt(sampleRate * duration);
+            float[] samples = new float[sampleCount];
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                float t = (float)i / sampleRate;
+                float thud = Mathf.Sin(2 * Mathf.PI * 220f * t) * Mathf.Exp(-t * 50f) * 0.7f;
+                float rip = (Random.value * 2f - 1f) * 0.6f * Mathf.Exp(-t * 35f);
+                samples[i] = Mathf.Clamp(thud + rip, -1f, 1f);
+            }
+
+            AudioClip clip = AudioClip.Create("Cardboard_Rip", sampleCount, 1, sampleRate, false);
+            clip.SetData(samples, 0);
+            return clip;
+        }
     }
 }

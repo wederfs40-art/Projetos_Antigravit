@@ -26,11 +26,11 @@ namespace IPSCSimulator.Weapons
 
         [Header("Recuo Procedural")]
         [Tooltip("Coice para trás (eixo Z) e leve desvio nos eixos X/Y.")]
-        [SerializeField] private Vector3 recoilKickPosition = new Vector3(0.008f, 0.015f, -0.06f);
+        [SerializeField] private Vector3 recoilKickPosition = new Vector3(0.015f, 0.035f, -0.11f);
         [Tooltip("Elevação do cano (Pitch) e variação lateral (Yaw/Roll).")]
-        [SerializeField] private Vector3 recoilKickRotation = new Vector3(-8f, 2f, 1f);
-        [SerializeField] private float recoilSnappiness = 20f;
-        [SerializeField] private float recoilReturnSpeed = 10f;
+        [SerializeField] private Vector3 recoilKickRotation = new Vector3(-14f, 3.5f, 2f);
+        [SerializeField] private float recoilSnappiness = 26f;
+        [SerializeField] private float recoilReturnSpeed = 12f;
 
         // Estados internos
         private bool _isAiming;
@@ -103,10 +103,34 @@ namespace IPSCSimulator.Weapons
                 }
             }
 
-            // Tecla R: Recarregar
+            // Tecla R: Recarregar tático com animação
             if (Input.GetKeyDown(KeyCode.R) && weapon != null)
             {
-                weapon.Reload();
+                weapon.StartReload();
+            }
+
+            // Seleção rápida de armas (Teclas 1, 2, 3 e Scroll do Mouse)
+            if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1))
+            {
+                IPSCSimulator.Match.TacticalGameManager.Instance?.ChangeWeaponInGame(IPSCSimulator.Match.SelectedWeaponType.Pistol_9mm);
+            }
+            else if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2))
+            {
+                IPSCSimulator.Match.TacticalGameManager.Instance?.ChangeWeaponInGame(IPSCSimulator.Match.SelectedWeaponType.Revolver_DanWesson);
+            }
+            else if (Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Keypad3))
+            {
+                IPSCSimulator.Match.TacticalGameManager.Instance?.ChangeWeaponInGame(IPSCSimulator.Match.SelectedWeaponType.SMG_Tactical);
+            }
+
+            float scroll = Input.GetAxis("Mouse ScrollWheel");
+            if (scroll > 0.05f)
+            {
+                IPSCSimulator.Match.TacticalGameManager.Instance?.CycleWeapon(1);
+            }
+            else if (scroll < -0.05f)
+            {
+                IPSCSimulator.Match.TacticalGameManager.Instance?.CycleWeapon(-1);
             }
         }
 
