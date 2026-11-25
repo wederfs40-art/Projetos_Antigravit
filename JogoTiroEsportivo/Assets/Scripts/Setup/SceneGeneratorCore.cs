@@ -262,9 +262,20 @@ namespace IPSCSimulator.Setup
             camObj.transform.SetParent(player.transform);
             camObj.transform.localPosition = new Vector3(0f, 1.65f, 0f);
             Camera cam = camObj.AddComponent<Camera>();
+            camObj.tag = "MainCamera";
             camObj.AddComponent<AudioListener>();
             cam.fieldOfView = 75f;
             cam.nearClipPlane = 0.02f;
+
+            // Desativa câmeras antigas na cena para evitar conflitos de exibição e áudio
+            Camera[] allCams = Object.FindObjectsByType<Camera>(FindObjectsSortMode.None);
+            foreach (Camera c in allCams)
+            {
+                if (c != cam && c != null)
+                {
+                    c.gameObject.SetActive(false);
+                }
+            }
 
             SetFieldValue(controller, "playerCameraTransform", camObj.transform);
 
