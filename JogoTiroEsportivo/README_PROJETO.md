@@ -55,7 +55,8 @@ Você **não precisa modelar nem configurar nada manualmente**:
 | **Mouse** | Olhar / Mirar a visão (com Free Aim de Câmera Corporal) |
 | **[1], [2], [3]** ou **Scroll do Mouse** | **Troca Rápida de Arma**: Alterna instantaneamente entre Pistola 9mm, Dan Wesson .357 e SMG |
 | **Botão Direito (Segurar)** | **ADS (Aim Down Sights)**: Alinha alça, massa de mira e alvo perfeitamente |
-| **Shift Esquerdo (Segurar)** | **Prender a Respiração**: Amortece o balanço natural em 80% |
+| **Shift Esquerdo (Movimento)** | **Tactical Sprint / Estabilização**: Corrida tática com arma levantada a 45° ou estabilização de mira |
+| **I** | **Inspecionar Arma (Weapon Inspect)**: Gira a arma para checar o ferrolho, a câmara e o magazine |
 | **Botão Esquerdo** | **Disparar**: Semiautomático ou Automático contínuo (SMG) |
 | **R** | **Recarregar**: Animação de descida e inserção de carregador novo e ciclado de ferrolho |
 | **T** | **Comando do RO (Range Officer)**: Dá *"Standby"*, aguarda delay aleatório e soa o **BEEP!** |
@@ -67,6 +68,11 @@ Você **não precisa modelar nem configurar nada manualmente**:
 
 ## 📁 Estrutura de Código
 
+- `Assets/Scripts/Player/TacticalViewmodelArms.cs` - Rigging e Two-Bone IK para braços e mãos com dedos articulados segurando a empunhadura e guarda-mão.
+- `Assets/Scripts/Weapons/ProceduralViewmodelMotion.cs` - Física secundária procedural (Weapon Sway, Walk/Sprint Bobbing de Lissajous e Recoil Kick por mola).
+- `Assets/Scripts/Weapons/TacticalWeaponCycles.cs` - Ciclos mecânicos da arma, ciclo de ferrolho (Bolt Cycle), recarga tática e inspeção detalhada de arma (`[I]`).
+- `Assets/Scripts/Utilities/PBRMaterialFactory.cs` - Geração PBR em tempo de execução com Normal Maps procedurais via filtro Sobel.
+- `Assets/Scripts/Setup/CinematicLightingSetup.cs` - Iluminação cinematográfica com Soft Shadows de alta resolução, iluminação tricolor ambiente e Reflection Probe.
 - `Assets/Scripts/Player/BodycamCameraController.cs` - Física de câmera corporal com Free Aim (zona morta de mira), inércia de passada de colete balístico e vinheta de lente com carimbo REC.
 - `Assets/Scripts/Player/PlayerController.cs` - Locomoção e câmera em 1ª pessoa integrada à física corporal.
 - `Assets/Scripts/Ballistics/Bullet.cs` - Balística contínua por Raycast (anti-tunneling) e gravidade física real.

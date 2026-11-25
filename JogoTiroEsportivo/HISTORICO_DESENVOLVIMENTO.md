@@ -364,3 +364,51 @@ Para entregar a estética do jogo *BODYCAM* e *UNRECORD*:
   - O sistema suspende a verificação em segundo plano de downloads automáticos para prevenir conflitos de permissões entre a conta Administrador e o perfil de usuário comum.
 - **Orientação:**
   - Pode-se clicar tranquilamente em **"Não Mostrar Novamente"**. Não há qualquer prejuízo para os scripts C#, para a compilação ou para a execução do Unity Editor.
+
+---
+
+## 🎖️ 19. Arquitetura de FPS Tático Fotorrealista: Implementação dos 4 Pilares de Alto Nível
+
+Atendendo à especificação técnica detalhada enviada pelo usuário, estruturou-se uma arquitetura completa de FPS tático AAA inspirada nas referências de *Escape from Tarkov*, *Unrecord* e *Bodycam*:
+
+```text
+[ Câmera do Jogador / Bodycam ]
+        │
+        ├──► [ TacticalViewmodelArms.cs ] (Rigging Esquelético + Two-Bone IK Solver)
+        │           ▲                           │ (Mão R no Grip / Mão L no Guarda-mão)
+        │           │                           ▼
+        └──► [ WeaponHolder ] ──────► [ ProceduralViewmodelMotion.cs ] (Sway, Bobbing, Recoil)
+                    │                           │
+                    ├──► [ TacticalWeaponCycles.cs ] (Bolt Cycle, Inspect [I], Recarga Tática)
+                    └──► [ Weapon.cs ] ──► Projéteis Ativos com Força Física (380N)
+```
+
+### 1. Viewmodel e Braços Articulados com Rigging & Two-Bone IK (`TacticalViewmodelArms.cs`)
+- **Estrutura Óssea Hierárquica:** Ombro (`Clavicle`) $\rightarrow$ Braço Superior (`UpperArm`) $\rightarrow$ Cotovelo articulado $\rightarrow$ Antebraço (`Forearm`) $\rightarrow$ Pulso $\rightarrow$ Mão com 5 Dedos articulados (Polegar, Indicador no gatilho, Médio, Anelar e Mínimo).
+- **Two-Bone IK Solver Analítico:** Algoritmo baseado na lei dos cossenos com vetor de dica (*Elbow Hint/Pole Vector*), calculando a flexão natural do cotovelo para fora e para baixo.
+- **Alvos Dinâmicos de IK:**
+  - Mão Direita: travada firmemente no punho (*Grip Target*).
+  - Mão Esquerda: em postura de suporte no guarda-mão (*Handguard Target*). Durante recargas, desacopla-se organicamente para descer até a cintura, ejetar o carregador, inserir o novo pente e ciclar o ferrolho.
+
+### 2. Ciclos Mecânicos da Arma e Inspeção (`TacticalWeaponCycles.cs`)
+- **Inspeção da Arma (Weapon Inspect - Tecla `[I]`):** Animação fluida em 3 fases onde o operador gira e inclina a arma para examinar a câmara de ejeção, o ferrolho e a base do magazine (idêntico à referência de *Escape from Tarkov*).
+- **Ciclo de Ferrolho (Bolt Cycle):** A cada disparo, o ferrolho sofre recuo instantâneo para trás sincronizado com a abertura da janela de ejeção e o arremesso da cápsula de latão, retornando por mola elástica ou travando aberto (*Slide Lock*) se o carregador esgotar.
+- **Recarga Tática vs Recarga Vazia:**
+  - *Recarga Tática (com munição na câmara):* troca rápida e silenciosa de carregador.
+  - *Recarga Vazia:* ejeção de carregador vazio (`MagOut`), inserção de novo carregador (`MagIn`) e liberação do ferrolho (`SlideRack / Bolt Release`).
+
+### 3. Movimentação Procedural e Física Secundária (`ProceduralViewmodelMotion.cs`)
+- **Weapon Sway (Inércia e Atraso):** Simula a massa física do armamento; virar a visão para a direita faz a arma deslizar para a esquerda com amortecimento suave por mola (*Spring Damper*), adicionando rotação angular em roll e yaw.
+- **Walk / Sprint Bobbing (Curvas de Lissajous):** Padrão de passada em figura 8 com amplitudes e frequências variáveis para caminhada e corrida tática.
+- **Tactical Sprint (Postura High Ready):** Segurar `Shift` em movimento faz a arma subir para uma postura inclinada a 45° (*high ready*), simulando a locomoção de forças especiais.
+- **Procedural Recoil Kick:** Coice físico translacional no eixo Z e elevação angular no eixo X com amortecimento elástico de retorno.
+
+### 4. Gráficos, Materiais PBR e Iluminação Cinematográfica (`PBRMaterialFactory.cs` & `CinematicLightingSetup.cs`)
+- **Normal Maps Procedurais via Filtro Sobel:** Algoritmo que calcula gradientes de altura em tempo de execução para gerar texturas normais tangenciais, conferindo relevo tridimensional real a costuras de luvas, tramas Ripstop e aço escovado.
+- **Parâmetros Físicos PBR:** Materiais com propriedades físicas precisas de `_Metallic` e `_Glossiness` (Roughness invertida).
+- **Iluminação Cinematográfica:** Sol direcional com sombras suaves de alta definição (`LightShadows.Soft`), iluminação ambiente por gradiente tricolor (céu/horizonte/chão) e sonda de reflexão (*Reflection Probe*) em tempo real para reflexos metálicos naturais.
+
+### 5. Correção da Física de Disparos e Impactos (`Bullet.cs` & `Weapon.cs`)
+- **Ativação Obrigatória do Projétil:** O projétil clonado agora nasce 100% ativo (`bulletObj.SetActive(true)`), garantindo que o método `Update()` execute a balística contínua e o Raycast anti-tunneling.
+- **Transferência de Energia Cinética (380 Newtons):** Disparos contra barris de 55 galões ou caixas militares agora aplicam impulso físico real (`AddForceAtPosition`), fazendo os objetos rolarem, tombarem e reagirem aos tiros.
+- **Áudios de Impacto Reais:** Sons matemáticos procedurais específicos para metal, madeira, concreto e papelão, acompanhados de faíscas dinâmicas e furos de bala em qualquer superfície.

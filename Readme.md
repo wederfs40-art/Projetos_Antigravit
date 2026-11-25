@@ -49,7 +49,8 @@ Simulador de tiro em primeira pessoa (FPS) de alta fidelidade balística, com re
 - **Mouse:** Olhar / Mirar (com Free Aim de câmera corporal)
 - **[1], [2], [3]** ou **Scroll do Mouse:** Alternar instantaneamente de arma
 - **Botão Direito (Segurar):** Mira ADS (Aim Down Sights)
-- **Shift Esquerdo (Segurar):** Prender a Respiração (estabilização)
+- **Shift Esquerdo (Movimento):** Tactical Sprint (corrida com arma em high ready) ou estabilização
+- **I:** Inspecionar Arma (Weapon Inspect - giro de 3 fases)
 - **Botão Esquerdo:** Disparar (Semi / Automático contínuo)
 - **R:** Recarregar carregador (com ejeção e inserção de magazine e slide rack)
 - **T:** Comando do RO (*Standby* + *BEEP*)
