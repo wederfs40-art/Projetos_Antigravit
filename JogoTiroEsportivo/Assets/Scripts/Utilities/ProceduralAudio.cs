@@ -110,5 +110,33 @@ namespace IPSCSimulator.Utilities
             clip.SetData(samples, 0);
             return clip;
         }
+
+        /// <summary>
+        /// Gera o estalido metálico estridente de bala 9mm batendo em chapa de aço IPSC (Steel Popper / Plate).
+        /// </summary>
+        public static AudioClip CreateSteelPingClip()
+        {
+            int sampleRate = 44100;
+            float duration = 0.85f;
+            int sampleCount = Mathf.FloorToInt(sampleRate * duration);
+            float[] samples = new float[sampleCount];
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                float t = (float)i / sampleRate;
+                // Ataque ultra rápido de impacto seguido de ressonância metálica duradoura
+                float envelope = Mathf.Exp(-t * 6.5f);
+                float ring1 = Mathf.Sin(2 * Mathf.PI * 1850f * t);
+                float ring2 = Mathf.Sin(2 * Mathf.PI * 3420f * t) * 0.5f;
+                float ring3 = Mathf.Sin(2 * Mathf.PI * 920f * t) * 0.3f;
+                float initialCrack = (Random.value * 2f - 1f) * Mathf.Exp(-t * 80f) * 0.6f;
+
+                samples[i] = Mathf.Clamp((ring1 + ring2 + ring3) * envelope * 0.6f + initialCrack, -1f, 1f);
+            }
+
+            AudioClip clip = AudioClip.Create("SteelTarget_Ping", sampleCount, 1, sampleRate, false);
+            clip.SetData(samples, 0);
+            return clip;
+        }
     }
 }

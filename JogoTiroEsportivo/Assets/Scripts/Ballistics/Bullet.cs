@@ -58,7 +58,7 @@ namespace IPSCSimulator.Ballistics
             {
                 transform.position = hit.point;
 
-                // Processa colisão com alvos IPSC
+                // Processa colisão com alvos IPSC de papel
                 IPSCTargetZone targetZone = hit.collider.GetComponent<IPSCTargetZone>();
                 if (targetZone != null)
                 {
@@ -66,11 +66,20 @@ namespace IPSCSimulator.Ballistics
                 }
                 else
                 {
-                    // Superfície genérica (chão, parede, suporte de madeira)
-                    if (_decalPrefab != null)
+                    // Processa colisão com alvos metálicos reativos (Steel Poppers)
+                    IPSCSteelPopper steelPopper = hit.collider.GetComponentInParent<IPSCSteelPopper>();
+                    if (steelPopper != null)
                     {
-                        GameObject decal = Instantiate(_decalPrefab, hit.point + (hit.normal * 0.001f), Quaternion.LookRotation(-hit.normal));
-                        decal.transform.SetParent(hit.collider.transform);
+                        steelPopper.OnHit(hit.point, hit.normal);
+                    }
+                    else
+                    {
+                        // Superfície genérica (chão, parede, suporte de madeira)
+                        if (_decalPrefab != null)
+                        {
+                            GameObject decal = Instantiate(_decalPrefab, hit.point + (hit.normal * 0.001f), Quaternion.LookRotation(-hit.normal));
+                            decal.transform.SetParent(hit.collider.transform);
+                        }
                     }
                 }
 

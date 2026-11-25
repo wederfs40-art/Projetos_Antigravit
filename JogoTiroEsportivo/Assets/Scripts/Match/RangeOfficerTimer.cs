@@ -174,6 +174,12 @@ namespace IPSCSimulator.Match
             }
         }
 
+        public void AddScore(int points)
+        {
+            if (_state != TimerState.Running) return;
+            _totalAlpha += Mathf.Max(1, points / 5);
+        }
+
         /// <summary>
         /// Encerra a pista, processa as penalidades de Miss e calcula o Hit Factor.
         /// </summary>
@@ -242,6 +248,14 @@ namespace IPSCSimulator.Match
             {
                 if (target != null) target.ObrearAlvo();
             }
+
+            // Reergue todos os alvos metálicos reativos (Poppers)
+            IPSCSteelPopper[] poppers = UnityEngine.Object.FindObjectsByType<IPSCSteelPopper>(FindObjectsSortMode.None);
+            foreach (var popper in poppers)
+            {
+                if (popper != null) popper.ResetPopper();
+            }
+
             _state = TimerState.Idle;
             OnTimerStateChanged?.Invoke(_state);
         }
