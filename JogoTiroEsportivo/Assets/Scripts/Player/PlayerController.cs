@@ -42,6 +42,12 @@ namespace IPSCSimulator.Player
         {
             if (Cursor.lockState != CursorLockMode.Locked) return;
 
+            // Se o BodycamCameraController estiver ativo na câmera, ele assume o controle de inércia e Free Aim
+            if (playerCameraTransform != null && playerCameraTransform.GetComponent<BodycamCameraController>() != null)
+            {
+                return;
+            }
+
             float mouseX = Input.GetAxisRaw("Mouse X") * mouseSensitivity;
             float mouseY = Input.GetAxisRaw("Mouse Y") * mouseSensitivity;
 

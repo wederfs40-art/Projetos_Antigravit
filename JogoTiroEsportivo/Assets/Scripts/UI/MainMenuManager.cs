@@ -82,6 +82,7 @@ namespace IPSCSimulator.UI
             DrawEnvironmentButton(GameEnvironmentType.IPSC_Outdoor_Long, "🏆 Pista Longa IPSC (Torneio Oficial 30m)", "Pista completa com 8 alvos de papelão, 4 poppers de aço e 3 boxes de tiro.");
             DrawEnvironmentButton(GameEnvironmentType.Indoor_Precision_Stand, "🎯 Estande Indoor de Precisão", "Estande fechado com cabines individuais acústicas e marcações de 5m a 25m.");
             DrawEnvironmentButton(GameEnvironmentType.Tactical_CS_Killhouse, "🏢 Armazém Tático CQB (Estilo Counter-Strike)", "Ambiente urbano com contêineres marítimos, caixas militares e alvos hostis.");
+            DrawEnvironmentButton(GameEnvironmentType.Bodycam_ShootHouse, "🎥 Killhouse Tático em Compensado (Estilo BODYCAM / UNRECORD)", "Shoot house de madeira compensada com vigas estruturais, iluminação de galpão e câmera corporal.");
 
             GUILayout.Space(15);
 

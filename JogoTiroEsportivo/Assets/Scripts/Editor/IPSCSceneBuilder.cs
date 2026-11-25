@@ -59,6 +59,13 @@ namespace IPSCSimulator.EditorTools
             SceneGeneratorCore.BuildSelectedEnvironment(GameEnvironmentType.Tactical_CS_Killhouse, SelectedWeaponType.SMG_Tactical);
             EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         }
+
+        [MenuItem("IPSC Simulator/Cenários Diretos/6. Killhouse Policial em Compensado (Estilo BODYCAM)", false, 25)]
+        public static void BuildBodycamShootHouse()
+        {
+            SceneGeneratorCore.BuildSelectedEnvironment(GameEnvironmentType.Bodycam_ShootHouse, SelectedWeaponType.Pistol_9mm);
+            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+        }
     }
 }
 #endif

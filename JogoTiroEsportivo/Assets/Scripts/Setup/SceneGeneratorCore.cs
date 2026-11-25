@@ -69,6 +69,9 @@ namespace IPSCSimulator.Setup
                 case GameEnvironmentType.Tactical_CS_Killhouse:
                     BuildCSKillhouse(root.transform, targetsList);
                     break;
+                case GameEnvironmentType.Bodycam_ShootHouse:
+                    BuildBodycamShootHouse(root.transform, targetsList);
+                    break;
             }
 
             // 5. Instancia o Jogador e a Arma Selecionada
@@ -428,6 +431,193 @@ namespace IPSCSimulator.Setup
         }
 
         // =========================================================================
+        // CENÁRIO 6: KILLHOUSE TÁTICO POLICIAL EM COMPENSADO (ESTILO BODYCAM / UNRECORD)
+        // =========================================================================
+        private static void BuildBodycamShootHouse(Transform root, List<IPSCTarget> targets)
+        {
+            SetupBodycamWarehouseLighting();
+
+            Material matPlywood = ProceduralMaterials.CreatePlywoodOSBMaterial();
+            Material matStud = ProceduralMaterials.CreateMaterial(new Color(0.68f, 0.48f, 0.28f), "Mat_PineStud_2x4", 0.15f, 0.0f);
+            Material matTruss = ProceduralMaterials.CreateTrussSteelMaterial();
+            Material matRoof = ProceduralMaterials.CreateMaterial(new Color(0.20f, 0.22f, 0.24f), "Mat_WarehouseRoof", 0.2f, 0.5f);
+            Material matSteel = CreateSteelMaterial();
+
+            GameObject env = new GameObject("Environment_Bodycam_ShootHouse");
+            env.transform.SetParent(root);
+
+            // 1. Piso de compensado/OSB com marcas de treino
+            CreateFloor(env.transform, new Vector3(0, -0.1f, 15f), new Vector3(22f, 0.2f, 32f), matPlywood);
+
+            // 2. Galpão industrial externo (Teto alto com clarabóias)
+            CreateWall(env.transform, new Vector3(-10.5f, 3.2f, 15f), new Vector3(0.5f, 6.5f, 32f), matRoof);
+            CreateWall(env.transform, new Vector3(10.5f, 3.2f, 15f), new Vector3(0.5f, 6.5f, 32f), matRoof);
+            CreateWall(env.transform, new Vector3(0, 3.2f, 30.5f), new Vector3(22f, 6.5f, 0.5f), matRoof);
+            CreateWall(env.transform, new Vector3(0, 3.2f, -0.5f), new Vector3(22f, 6.5f, 0.5f), matRoof);
+
+            // Teto com aberturas de clarabóia
+            CreateWall(env.transform, new Vector3(0, 6.5f, 15f), new Vector3(22f, 0.3f, 32f), matRoof);
+
+            // 3. Treliças de Aço Industriais no Teto (Roof Trusses)
+            for (float z = 3f; z <= 27f; z += 6f)
+            {
+                CreateRoofTruss(env.transform, new Vector3(0, 5.8f, z), 20f, matTruss);
+            }
+
+            // 4. Lâmpadas Fluorescentes Suspensas de Galpão
+            for (float z = 4f; z <= 26f; z += 6f)
+            {
+                CreateHangingLight(env.transform, new Vector3(0f, 5.2f, z));
+                CreateHangingLight(env.transform, new Vector3(-4.5f, 5.2f, z));
+                CreateHangingLight(env.transform, new Vector3(4.5f, 5.2f, z));
+            }
+
+            // 5. Paredes Táticas do Shoot House em Madeira Compensada (OSB com vigas 2x4)
+            // Corredor Principal Central (Idêntico ao da Imagem 3!)
+            CreateFramedPlywoodWall(env.transform, new Vector3(-1.8f, 1.4f, 6f), new Vector3(0.12f, 2.8f, 12f), matPlywood, matStud);
+            CreateFramedPlywoodWall(env.transform, new Vector3(1.8f, 1.4f, 4f), new Vector3(0.12f, 2.8f, 8f), matPlywood, matStud);
+
+            // Abertura de Porta (Doorway) para a Sala 1 (à direita)
+            CreateFramedPlywoodWall(env.transform, new Vector3(5.5f, 1.4f, 8f), new Vector3(7.2f, 2.8f, 0.12f), matPlywood, matStud);
+            CreateFramedPlywoodWall(env.transform, new Vector3(9.0f, 1.4f, 13f), new Vector3(0.12f, 2.8f, 10f), matPlywood, matStud);
+            CreateFramedPlywoodWall(env.transform, new Vector3(5.5f, 1.4f, 18f), new Vector3(7.2f, 2.8f, 0.12f), matPlywood, matStud);
+
+            // Sala 2 (à esquerda do corredor central)
+            CreateFramedPlywoodWall(env.transform, new Vector3(-5.5f, 1.4f, 12f), new Vector3(7.2f, 2.8f, 0.12f), matPlywood, matStud);
+            CreateFramedPlywoodWall(env.transform, new Vector3(-9.0f, 1.4f, 17f), new Vector3(0.12f, 2.8f, 10f), matPlywood, matStud);
+            CreateFramedPlywoodWall(env.transform, new Vector3(-5.5f, 1.4f, 22f), new Vector3(7.2f, 2.8f, 0.12f), matPlywood, matStud);
+
+            // Corredor em L e Sala Final
+            CreateFramedPlywoodWall(env.transform, new Vector3(0f, 1.4f, 18f), new Vector3(0.12f, 2.8f, 8f), matPlywood, matStud);
+            CreateFramedPlywoodWall(env.transform, new Vector3(3.5f, 1.4f, 22f), new Vector3(7.0f, 2.8f, 0.12f), matPlywood, matStud);
+            CreateFramedPlywoodWall(env.transform, new Vector3(0f, 1.4f, 27f), new Vector3(14.0f, 2.8f, 0.12f), matPlywood, matStud);
+
+            // 6. Alvos Táticos de Treinamento SWAT (Ameaças em Esquinas & Reféns Civis)
+            targets.Add(CreateIPSCTarget(root, "Ameaça_Corredor_Centro (12m)", new Vector3(0.5f, 1.4f, 12.0f), false, matPlywood));
+
+            // Sala 1: Varredura de Cômodo (Room Clearing)
+            targets.Add(CreateIPSCTarget(root, "Ameaça_Esquina_Direita (9m)", new Vector3(7.5f, 1.4f, 10.5f), false, matPlywood));
+            targets.Add(CreateIPSCTarget(root, "Refem_Civil_Sala1", new Vector3(6.5f, 1.35f, 10.0f), true, matPlywood));
+            CreateSteelPopper(root, "Popper_Aço_Sala1", new Vector3(4.5f, 0, 15f), matSteel);
+
+            // Sala 2: Ameaça atrás de meia-parede
+            CreateFramedPlywoodWall(env.transform, new Vector3(-4.5f, 0.6f, 15f), new Vector3(0.12f, 1.2f, 4f), matPlywood, matStud);
+            targets.Add(CreateIPSCTarget(root, "Ameaça_MeiaParede (16m)", new Vector3(-6.5f, 1.4f, 16.5f), false, matPlywood));
+            targets.Add(CreateIPSCTarget(root, "Refem_Civil_Sala2", new Vector3(-7.5f, 1.35f, 19.5f), true, matPlywood));
+
+            // Sala Final: Confronto com baterias de alvos
+            targets.Add(CreateIPSCTarget(root, "Ameaça_Final_1 (24m)", new Vector3(-2.5f, 1.4f, 24.5f), false, matPlywood));
+            targets.Add(CreateIPSCTarget(root, "Ameaça_Final_2 (25m)", new Vector3(2.5f, 1.4f, 25.0f), false, matPlywood));
+            CreateSteelPopper(root, "Popper_Aço_Final", new Vector3(0f, 0, 26.5f), matSteel);
+        }
+
+        private static void CreateFramedPlywoodWall(Transform parent, Vector3 pos, Vector3 scale, Material matPlywood, Material matStud)
+        {
+            GameObject wallGroup = new GameObject("Plywood_Wall_Framed");
+            wallGroup.transform.SetParent(parent);
+            wallGroup.transform.position = pos;
+
+            // Painel central de madeira compensada OSB
+            GameObject panel = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            panel.name = "OSB_Panel";
+            panel.transform.SetParent(wallGroup.transform);
+            panel.transform.localPosition = Vector3.zero;
+            panel.transform.localScale = scale;
+            panel.GetComponent<MeshRenderer>().material = matPlywood;
+
+            // Vigas de madeira 2x4 no topo (Header plate)
+            GameObject topPlate = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            topPlate.name = "Stud_TopHeader";
+            topPlate.transform.SetParent(wallGroup.transform);
+            topPlate.transform.localPosition = new Vector3(0, scale.y * 0.5f + 0.04f, 0);
+            topPlate.transform.localScale = new Vector3(scale.x > scale.z ? scale.x : 0.16f, 0.08f, scale.z > scale.x ? scale.z : 0.16f);
+            topPlate.GetComponent<MeshRenderer>().material = matStud;
+            Object.DestroyImmediate(topPlate.GetComponent<Collider>());
+        }
+
+        private static void CreateRoofTruss(Transform parent, Vector3 pos, float spanWidth, Material matTruss)
+        {
+            GameObject truss = new GameObject("Roof_Truss");
+            truss.transform.SetParent(parent);
+            truss.transform.position = pos;
+
+            // Viga horizontal inferior
+            GameObject bottomBeam = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            bottomBeam.transform.SetParent(truss.transform);
+            bottomBeam.transform.localPosition = Vector3.zero;
+            bottomBeam.transform.localScale = new Vector3(spanWidth, 0.15f, 0.15f);
+            bottomBeam.GetComponent<MeshRenderer>().material = matTruss;
+            Object.DestroyImmediate(bottomBeam.GetComponent<Collider>());
+
+            // Viga angular esquerda
+            GameObject leftSlope = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            leftSlope.transform.SetParent(truss.transform);
+            leftSlope.transform.localPosition = new Vector3(-spanWidth * 0.25f, 0.5f, 0);
+            leftSlope.transform.localScale = new Vector3(spanWidth * 0.55f, 0.12f, 0.12f);
+            leftSlope.transform.localRotation = Quaternion.Euler(0, 0, 12f);
+            leftSlope.GetComponent<MeshRenderer>().material = matTruss;
+            Object.DestroyImmediate(leftSlope.GetComponent<Collider>());
+
+            // Viga angular direita
+            GameObject rightSlope = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            rightSlope.transform.SetParent(truss.transform);
+            rightSlope.transform.localPosition = new Vector3(spanWidth * 0.25f, 0.5f, 0);
+            rightSlope.transform.localScale = new Vector3(spanWidth * 0.55f, 0.12f, 0.12f);
+            rightSlope.transform.localRotation = Quaternion.Euler(0, 0, -12f);
+            rightSlope.GetComponent<MeshRenderer>().material = matTruss;
+            Object.DestroyImmediate(rightSlope.GetComponent<Collider>());
+        }
+
+        private static void CreateHangingLight(Transform parent, Vector3 pos)
+        {
+            GameObject lightObj = new GameObject("Hanging_Warehouse_Light");
+            lightObj.transform.SetParent(parent);
+            lightObj.transform.position = pos;
+
+            // Fio de sustentação
+            GameObject wire = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            wire.transform.SetParent(lightObj.transform);
+            wire.transform.localPosition = new Vector3(0, 0.4f, 0);
+            wire.transform.localScale = new Vector3(0.015f, 0.4f, 0.015f);
+            wire.GetComponent<MeshRenderer>().material = ProceduralMaterials.CreateMaterial(Color.black, "Mat_Wire");
+            Object.DestroyImmediate(wire.GetComponent<Collider>());
+
+            // Calha fluorescente emissiva
+            GameObject fixture = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            fixture.transform.SetParent(lightObj.transform);
+            fixture.transform.localPosition = Vector3.zero;
+            fixture.transform.localScale = new Vector3(1.4f, 0.08f, 0.25f);
+            fixture.GetComponent<MeshRenderer>().material = ProceduralMaterials.CreateEmissiveMaterial(new Color(1f, 0.98f, 0.92f), "Mat_Fluorescent_Tube", 3.0f);
+            Object.DestroyImmediate(fixture.GetComponent<Collider>());
+
+            // Luz pontual para iluminar o corredor
+            Light pl = lightObj.AddComponent<Light>();
+            pl.type = LightType.Point;
+            pl.color = new Color(1f, 0.96f, 0.88f);
+            pl.range = 10f;
+            pl.intensity = 1.4f;
+        }
+
+        private static void SetupBodycamWarehouseLighting()
+        {
+            Light sun = Object.FindAnyObjectByType<Light>();
+            if (sun == null)
+            {
+                GameObject sunObj = new GameObject("Directional_Sun");
+                sun = sunObj.AddComponent<Light>();
+                sun.type = LightType.Directional;
+            }
+
+            sun.color = new Color(1f, 0.94f, 0.82f);
+            sun.intensity = 1.35f;
+            sun.transform.rotation = Quaternion.Euler(58f, -42f, 0f);
+            sun.shadows = LightShadows.Soft;
+
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+            RenderSettings.ambientLight = new Color(0.22f, 0.23f, 0.26f);
+        }
+
+        // =========================================================================
         // JOGADOR E SELEÇÃO DE ARMAS
         // =========================================================================
         private static void CreatePlayerWithWeapon(Transform parent, GameObject bulletPrefab, GameObject decalPrefab, SelectedWeaponType weaponType)
@@ -443,14 +633,14 @@ namespace IPSCSimulator.Setup
 
             PlayerController controller = player.AddComponent<PlayerController>();
 
-            // Câmera do Jogador
+            // Câmera do Jogador (Posicionada na altura do colete para efeito Bodycam)
             GameObject camObj = new GameObject("PlayerCamera");
             camObj.transform.SetParent(player.transform);
-            camObj.transform.localPosition = new Vector3(0f, 1.65f, 0f);
+            camObj.transform.localPosition = new Vector3(0f, 1.55f, 0.05f);
             Camera cam = camObj.AddComponent<Camera>();
             camObj.tag = "MainCamera";
             camObj.AddComponent<AudioListener>();
-            cam.fieldOfView = 68f;
+            cam.fieldOfView = 78f; // Visão grande angular tática de Bodycam
             cam.nearClipPlane = 0.02f;
 
             // Desativa câmeras antigas
@@ -467,6 +657,12 @@ namespace IPSCSimulator.Setup
             holder.transform.localPosition = new Vector3(0.18f, -0.22f, 0.42f);
 
             WeaponHandling handling = holder.AddComponent<WeaponHandling>();
+
+            // Adiciona o controlador de câmera corporal Bodycam com Free Aim e inércia física
+            BodycamCameraController bodycam = camObj.AddComponent<BodycamCameraController>();
+            SetFieldValue(bodycam, "playerBody", player.transform);
+            SetFieldValue(bodycam, "weaponHolder", holder.transform);
+            SetFieldValue(bodycam, "cam", cam);
 
             // Instancia ou constrói a arma selecionada
             AttachSelectedWeapon(holder, handling, bulletPrefab, decalPrefab, weaponType);

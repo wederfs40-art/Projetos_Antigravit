@@ -349,5 +349,67 @@ namespace IPSCSimulator.Utilities
             tex.Apply();
             return tex;
         }
+
+        /// <summary>
+        /// Textura fotorrealista de madeira compensada / OSB para Killhouse policial estilo Bodycam (Imagem 3).
+        /// </summary>
+        public static Texture2D CreatePlywoodOSBTexture()
+        {
+            int size = 512;
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGB24, true);
+            Color[] pixels = new Color[size * size];
+
+            Color baseWood = new Color(0.74f, 0.55f, 0.35f);
+            Color darkGrain = new Color(0.56f, 0.38f, 0.22f);
+            Color lightChip = new Color(0.86f, 0.68f, 0.44f);
+            Color knotDark = new Color(0.32f, 0.20f, 0.12f);
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float u = (float)x / size;
+                    float v = (float)y / size;
+
+                    // Veios de madeira alongados verticalmente
+                    float grain = Mathf.PerlinNoise(u * 22f, v * 3.5f) * 0.65f + Mathf.PerlinNoise(u * 45f, v * 8f) * 0.35f;
+                    Color c = Color.Lerp(baseWood, darkGrain, grain);
+
+                    // Fragmentos de lascas prensadas de OSB
+                    float chipNoise = Mathf.PerlinNoise(u * 60f + 10f, v * 60f + 10f);
+                    if (chipNoise > 0.68f)
+                    {
+                        c = Color.Lerp(c, lightChip, (chipNoise - 0.68f) * 3f);
+                    }
+
+                    // Nós da madeira ocasionais
+                    float knotNoise = Mathf.PerlinNoise(u * 4f + 3f, v * 1.5f + 5f);
+                    if (knotNoise > 0.82f)
+                    {
+                        c = Color.Lerp(c, knotDark, (knotNoise - 0.82f) * 4f);
+                    }
+
+                    pixels[y * size + x] = c;
+                }
+            }
+
+            tex.SetPixels(pixels);
+            tex.Apply();
+            return tex;
+        }
+
+        public static Material CreatePlywoodOSBMaterial()
+        {
+            Material mat = CreateMaterial(Color.white, "Mat_Plywood_OSB", 0.18f, 0.05f);
+            mat.mainTexture = CreatePlywoodOSBTexture();
+            mat.mainTextureScale = new Vector2(2f, 2f);
+            return mat;
+        }
+
+        public static Material CreateTrussSteelMaterial()
+        {
+            Material mat = CreateMaterial(new Color(0.18f, 0.19f, 0.21f), "Mat_Industrial_TrussSteel", 0.45f, 0.80f);
+            return mat;
+        }
     }
 }
