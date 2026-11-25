@@ -73,11 +73,15 @@ Para que o projeto pudesse ser jogado imediatamente sem a necessidade de pacotes
 | :--- | :--- | :--- |
 | `PlayerController.cs` | `Assets/Scripts/Player/` | Locomoção FPS em 1ª pessoa (andar, correr, mouse look com clamp vertical). |
 | `IPSCUIManager.cs` | `Assets/Scripts/UI/` | HUD completo em tela via IMGUI nativo: cronômetro dinâmico, último split, contador de munição e painel de resultado com Hit Factor. |
-| `ProceduralAudio.cs` | `Assets/Scripts/Utilities/` | Síntese de áudio matemática em tempo de execução: bipe senoidal de 2.75 kHz, estampido de tiro 9mm, trava de ferrolho e clique seco de percussor. |
-| `ProceduralMaterials.cs` | `Assets/Scripts/Utilities/` | Geração procedural de texturas de papelão com linhas de zonas IPSC e furos de bala transparentes. |
-| `SceneGeneratorCore.cs` | `Assets/Scripts/Setup/` | Construtor que gera o estande de tiro completo (chão, barreiras de segurança, para-balas, alvos e pistola 3D funcional). |
-| `IPSCSceneBuilder.cs` | `Assets/Scripts/Editor/` | Adiciona o menu **`IPSC Simulator > Montar Pista Completa (Auto-Setup)`** na barra superior do Unity Editor. |
-| `IPSCAutoBootstrap.cs` | `Assets/Scripts/Setup/` | Gatilho para montar automaticamente o cenário caso a cena esteja vazia ao dar Play. |
+| `MainMenuManager.cs` | `Assets/Scripts/UI/` | Menu Principal militar e Menu de Pausa (`ESC`) para alternar modos, mapas e armas em tempo real. |
+| `TacticalGameManager.cs` | `Assets/Scripts/Match/` | Singleton de ciclo de vida do jogo: estados (`MainMenu`, `Playing`, `Paused`), transições de cena e controle de cursor. |
+| `GameEnums.cs` | `Assets/Scripts/Match/` | Enumerações dos 5 ambientes de tiro, 3 classes de armas e estados do jogo. |
+| `IPSCSteelPopper.cs` | `Assets/Scripts/Targets/` | Prato metálico reativo com queda física (-85°), áudio metálico procedural de impacto e rearmamento em `[U]`. |
+| `ProceduralAudio.cs` | `Assets/Scripts/Utilities/` | Síntese de áudio matemática em tempo de execução: bipe senoidal de 2.75 kHz, estampido de tiro 9mm, estampido pesado de revólver .357, rajadas de SMG, trava de ferrolho e impacto em aço (*Steel Ping*). |
+| `ProceduralMaterials.cs` | `Assets/Scripts/Utilities/` | Geração procedural PBR de texturas: papelão IPSC, furos de bala transparentes, asfalto, cascalho, ripas de madeira, tambores de óleo, faixas de segurança pretas/amarelas e aço balístico. |
+| `SceneGeneratorCore.cs` | `Assets/Scripts/Setup/` | Construtor dinâmico de 5 ambientes completos (IPSC Curta, Média, Longa, Stand Indoor e Killhouse CS-Style) e armas selecionadas. |
+| `IPSCSceneBuilder.cs` | `Assets/Scripts/Editor/` | Menus rápidos no Unity Editor sob **`IPSC Simulator`** para auto-setup e carregamento direto de qualquer um dos 5 cenários. |
+| `IPSCAutoBootstrap.cs` | `Assets/Scripts/Setup/` | Gatilho para montar automaticamente o cenário e menu caso a cena esteja vazia ao dar Play. |
 | `INICIAR_JOGO.bat` | Raiz do projeto | Launcher seguro para inicializar a Unity com DirectX 11, limpando travas e garantindo estabilidade. |
 
 ---
@@ -86,41 +90,41 @@ Para que o projeto pudesse ser jogado imediatamente sem a necessidade de pacotes
 
 | Entrada | Ação |
 | :--- | :--- |
-| **W, A, S, D** | Movimentação pelo estande de tiro |
-| **Mouse (Eixos X/Y)** | Controle de mira e visão da câmera |
-| **Botão Direito do Mouse (Hold)** | **Mira ADS**: Alinha alça, massa de mira e alvo |
-| **Shift Esquerdo (Hold)** | **Prender a Respiração**: Amortece o balanço natural |
-| **Botão Esquerdo do Mouse** | **Disparar**: Aciona recuo, split, furo no alvo e som |
-| **R** | **Recarregar**: Alimenta 17 tiros e destrava o ferrolho |
-| **T** | **Range Officer**: Dá *"Standby"*, aguarda delay e soa o **BEEP** |
-| **Y** | **Finalizar Pista**: Para o cronômetro e gera o cálculo do **Hit Factor** |
-| **U** | **Obrear Alvos**: Limpa todos os furos de bala e zera pontuações |
-| **ESC** | Libera ou bloqueia a trava do cursor do mouse |
+| **W, A, S, D** | Movimentação pelo cenário |
+| **Mouse (Eixos X/Y)** | Controle de mira e rotação de visão |
+| **Botão Direito do Mouse (Hold)** | **Mira ADS**: Alinha alça, massa de mira de fibra ótica e alvo |
+| **Shift Esquerdo (Hold)** | **Prender a Respiração**: Amortece em 80% o balanço natural |
+| **Botão Esquerdo do Mouse** | **Disparar**: Semiauto (Pistola/Revolver) ou Automático Contínuo (SMG) |
+| **R** | **Recarregar**: Alimenta o carregador da arma selecionada (6, 17 ou 30 tiros) |
+| **T** | **Range Officer**: Dá *"Standby"*, aguarda delay aleatório e soa o **BEEP** |
+| **Y** | **Finalizar Pista**: Para o cronômetro e apura o **Hit Factor** |
+| **U** | **Obrear / Reset**: Limpa todos os furos de bala e levanta os poppers de aço caídos |
+| **ESC** | **Menu de Pausa**: Alterna mapas, troca de arma ou reinicia a pista sem sair do Play |
 
 ---
 
 ## 🌐 4. Integração com a Unity Asset Store
 
 Durante o planejamento visual, foi orientado o resgate e a importação de ativos 3D gratuitos na **Unity Asset Store**:
-- **Pacotes Selecionados:**
-  - *`Pacote de Armas de Pistola Low-Poly Weapon Pack 1`* (da CASTELO BRAVO): Pistolas semiautomáticas (estilos Glock e 1911/2011) ideais para divisões IPSC Production e Standard.
-  - *`Low Poly SMG Weapons`*: Submetralhadoras / Carabinas 9mm para simular a divisão oficial **IPSC PCC (Pistol Caliber Carbine)**.
-  - *`Dan Wesson Modelo 715`*: Revólver com massa de fibra ótica para divisão IPSC Revolver.
+- **Pacotes Integrados:**
+  - *`Pacote de Armas de Pistola Low-Poly Weapon Pack 1, 2 e 3`* (da CASTELO BRAVO): Pistolas semiautomáticas prontas para divisões IPSC Production e Standard.
+  - *`Low Poly SMG Weapon Pack 2`*: Submetralhadoras / Carabinas 9mm para simular a divisão oficial **IPSC PCC (Pistol Caliber Carbine)**.
+  - *`Dan Wesson Modelo 715`*: Revólver magnum de alta fidelidade para divisão IPSC Revolver.
 - **Ciclo de Vida de Ativos (Open in Unity vs My Assets):**
   - Clicar em *"Adicionar aos Meus Recursos"* ou *"Open in Unity"* vincula o pacote à licença da conta na nuvem da Unity.
-  - Para que os modelos estejam fisicamente utilizáveis na cena, eles devem ser baixados e importados para o projeto via **`Window > Package Manager > Packages: My Assets`** dentro da Unity, surgindo então na pasta `Assets/`.
+  - Para que os modelos estejam fisicamente utilizáveis na cena, eles são baixados e importados para o projeto via **`Window > Package Manager > Packages: My Assets`** dentro da Unity, surgindo na pasta `Assets/`.
 
 ---
 
 ## 🔬 5. Diagnósticos Técnicos, Solução de Problemas & Estabilidade no Unity 6
 
-Durante a integração no ambiente local do usuário (Windows 11, Unity 6000.6.10f1, NVIDIA GeForce GTX 1660 SUPER), foram superados quatro desafios críticos de infraestrutura:
+Durante a integração no ambiente local do usuário (Windows 11, Unity 6000.6.10f1 / 6000.3.29f1 LTS, NVIDIA GeForce GTX 1660 SUPER), foram superados cinco desafios críticos de infraestrutura:
 
 ### 1. Incompatibilidade com uGUI na Unity 6 (Erro CS0234)
 - **Sintoma:** O Unity Editor impedia o Play com a mensagem: *"All compiler errors have to be fixed before you can enter playmode!"* e erros `CS0234: The type or namespace name 'UI' does not exist in the namespace 'UnityEngine'`.
 - **Causa:** Na Unity 6, o pacote antigo `com.unity.ugui` não vem habilitado por padrão em projetos básicos.
-- **Solução Arquitetural:** Em vez de forçar a instalação do pacote pesado uGUI, o `IPSCUIManager.cs` e o `SceneGeneratorCore.cs` foram refatorados para utilizar a biblioteca nativa `IMGUI` (`OnGUI`).
-- **Resultado:** Zero dependências de pacotes externos, compilação em 3.4 segundos com **0 Erros** e compatibilidade imediata com qualquer versão da Unity (2021, 2022 ou 6.x).
+- **Solução Arquitetural:** Em vez de forçar a instalação do pacote pesado uGUI, o `IPSCUIManager.cs`, o `MainMenuManager.cs` e o `SceneGeneratorCore.cs` foram concebidos com a biblioteca nativa `IMGUI` (`OnGUI`).
+- **Resultado:** Zero dependências de pacotes externos, compilação ultrarrápida com **0 Erros** e compatibilidade universal imediata.
 
 ### 2. Módulo WebGL / Web Build Support no Unity Hub
 - **Verificação:** Foi solicitada a instalação do módulo WebGL. No Unity Hub (configurado em português), verificou-se que na Unity 6 a plataforma foi renomeada para **`Web Build Support`** e já estava plenamente instalada (5.62 GB), permitindo compilações futuras para Web/HTML5 diretamente pelo menu `File > Build Profiles`.
@@ -141,7 +145,7 @@ Durante a integração no ambiente local do usuário (Windows 11, Unity 6000.6.1
 - **Ação:**
   1. Finalização de todos os processos zumbis, liberando **4,5 GB de memória RAM**.
   2. Limpeza profunda das pastas corrompidas `Library/` e `Temp/` (incluindo o arquivo de bloqueio `UnityLockfile`).
-  3. Com isso, na reinicialização o motor recria um banco de dados limpo a partir de `Assets/` sem qualquer loop de falhas.
+  3. Na reinicialização, o motor recriou um banco de dados limpo a partir de `Assets/` sem loops de falha.
 
 ### 5. Deadlock no Loop Principal (`Application.TickGlobalCallbacks`) e Crash do Burst JIT em DX12
 - **Sintoma:** A interface do Unity Editor congelou indefinidamente com o diálogo modal *"Hold on (busy for 26:47)... Application.TickGlobalCallbacks / Waiting for Unity's code to finish executing"*. No Gerenciador de Tarefas, o processo principal apresentava 0% de CPU com o subprocesso *Unity Crash Handler* ativo e a janela do *Unity Bug Reporter* em segundo plano.
@@ -155,13 +159,79 @@ Durante a integração no ambiente local do usuário (Windows 11, Unity 6000.6.1
   2. Purga completa do diretório `Library/BurstCache/` para eliminar binários JIT corrompidos.
   3. Limpeza das travas de concorrência em `Temp/UnityLockfile`.
   4. Atualização do script `INICIAR_JOGO.bat` com parâmetro `-force-d3d11` (DirectX 11 estável).
-  5. Instrução para parametrização nativa no Unity Hub com o argumento de inicialização estável.
 
 ---
 
-## 🚀 6. Governança e Versionamento no GitHub
+## 🔄 6. Migração para Unity 6.3 LTS e Correção do Erro `0x40000015`
+
+### Falha Crítica na Versão Experimental `6000.6.10f1`
+- **Sintoma:** Janela de erro do Windows com o aviso:
+  `Unity.exe - Erro de Aplicativo: A exceção unknown software exception (0x40000015) ocorreu no aplicativo no local 0x00007FFFC031FE4C.`
+- **Causa Raiz:** O código `0x40000015` corresponde a `STATUS_FATAL_APP_EXIT`. Na versão beta/preview `6000.6.10f1`, o coletor de lixo Mono (`BDWGC` - Boehm-Demers-Weiser Garbage Collector) sofre um crash de ponteiro nulo ao tentar ler metadados em segundo plano.
+- **Solução Definitiva:**
+  - O projeto foi migrado para a versão estável de longo prazo **Unity 6.3 LTS (`6000.3.29f1`)** através da alteração em `ProjectSettings/ProjectVersion.txt`.
+  - Foram removidos do arquivo `Packages/manifest.json` pacotes experimentais que geravam inconsistências com a nova LTS.
+  - O projeto passou a abrir de forma fluida, sem travamentos de inicialização nem falhas de memória.
+
+---
+
+## 🛡️ 7. Aviso de Execução com Privilégios de Administrador
+
+- **Mensagem no Console:**
+  `[Warning] Unity is not designed to run with Administrator privileges.`
+  `With elevated access, scripts in your project can modify system files, registry settings, or protected areas, even accidentally. This could make your system unstable or unbootable. Restart as a standard user for the safest experience.`
+- **O que significa:** O Windows ou o Unity Hub foi executado clicando em *"Executar como Administrador"*. A Unity exibe esse aviso por segurança de boas práticas (para evitar que plugins externos ou scripts maliciosos escrevam na pasta `C:\Windows` ou no registro).
+- **Impacto no Jogo:** Nenhum. Trata-se de um alerta informativo amarelo (`Warning`), que não impede a compilação, o teste, nem a execução do simulador. Caso deseje que a mensagem não apareça, basta abrir o Unity Hub normalmente sem o modo de Administrador.
+
+---
+
+## 📦 8. Resolução de Erros de Compilação após Importação de Modelos 3D
+
+- **Sintoma:** Ao importar o pacote de alta fidelidade do Revólver Dan Wesson 715 e pacotes Low Poly da Asset Store, o editor exibiu:
+  *"All compiler errors have to be fixed before you can enter playmode!"*
+- **Diagnóstico:** O pacote da Asset Store continha um script de demonstração legado em `Assets/3D Models/Props/Weapons/DWm715 FPS Model/Example/Scripts/ShowRoom.cs` que referenciava as bibliotecas antigas `Codice.CM.Common` e `TMPro` ausentes no manifesto do projeto.
+- **Ação:**
+  - O script acessório `ShowRoom.cs` e sua pasta de demonstração foram removidos com segurança.
+  - **Preservação Total:** Todos os modelos 3D FBX (arma completa, cano, tambor, munições), texturas 4K, materiais PBR e prefabs configurados do Dan Wesson 715 foram preservados intactos.
+  - O projeto voltou a compilar com **0 Erros e 0 Avisos**, liberando o modo Play imediatamente.
+
+---
+
+## 🎯 9. Criação do Menu Principal Interativo, 5 Ambientes e Seletor de Arsenal
+
+Atendendo à demanda de expansão para que o simulador não fosse apenas uma pista estática mas uma plataforma completa de treinamento e combate, foram implementadas as seguintes soluções:
+
+### 1. Menu Principal & Pause Menu (`MainMenuManager.cs` & `TacticalGameManager.cs`)
+- **Menu Inicial:** Painel tático militar escuro com seleção de cenários, escolha de armas, painel de controles e botão *"INICIAR SIMULAÇÃO"*.
+- **Pause Menu (`ESC`):** Permite reiniciar a pista, alterar o mapa em execução ou trocar de armamento instantaneamente durante a partida sem precisar fechar o Playmode.
+
+### 2. Diversidade de 5 Ambientes 3D Táticos:
+1. **IPSC Outdoor - Pista Curta (12 Tiros):**
+   - Estande oficial com shooting box demarcado com faixas amarelas e pretas, tambores azuis de 55 galões como anteparo, bancadas de segurança em madeira e 3 alvos de papelão em distâncias escalonadas (7m a 16m) com alvos No-Shoot.
+2. **IPSC Outdoor - Pista Média (24 Tiros - Labirinto):**
+   - Percurso dinâmico com barricadas de visão de madeira ripada (*Vision Barriers*), múltiplos ângulos de tiro, exigindo deslocamento tático do atirador, alvos de papelão e alvos metálicos reativos.
+3. **IPSC Outdoor - Pista Longa (32 Tiros - 30 Metros):**
+   - Estande estendido com para-balas elevados, baterias de alvos distantes para teste de balística e compensação de queda de projétil, além de fileira de poppers de aço.
+4. **Estande de Precisão Indoor (Club Stand):**
+   - Galpão fechado de tiro de clube com piso de concreto polido escuro, paredes com isolamento acústico, 4 baias individuais de tiro (cabines 1 a 4) com divisórias acolchoadas, marcadores métricos de piso (5m, 10m, 15m, 20m, 25m) e trilho de alvos suspenso.
+5. **Killhouse Tático CS-Style (CQB):**
+   - Cenário tático fechado inspirado em mapas clássicos de Counter-Strike com contêineres industriais de carga de 6 metros (vermelhos e azuis), caixas militares de suprimentos de madeira com reforços de aço, tambores de combustível, ângulos de esquinas para varredura (*corner clearing*) e silhuetas hostis mescladas com reféns inocentes (*No-Shoot*).
+
+### 3. Pratos Metálicos Reativos IPSC Popper (`IPSCSteelPopper.cs`)
+- Alvo de aço balístico que, ao receber o impacto da bala, executa rotação física de queda para trás (-85°).
+- Dispara som procedural de impacto em chapa metálica de alta frequência com ressonância acústica (*Steel Ping* - 1850Hz + 3420Hz).
+- Pontua +5 pontos na primeira queda e rearma automaticamente ao pressionar a tecla `[U]`.
+
+### 4. Arsenal com 3 Categorias de Armas:
+- **Pistola Tática 9mm:** 17 disparos, semiautomática, recuo balanceado, massa de mira em fibra ótica de alta visibilidade.
+- **Revólver Dan Wesson 715 .357 Magnum:** 6 disparos, modo esportivo, alto recuo vertical, som encorpado de alto calibre e impacto fulminante.
+- **Submetralhadora Tática (SMG):** 30 disparos, cadência automática de 550 RPM (segurando o gatilho), dispersão progressiva contínua.
+
+---
+
+## 🚀 10. Governança e Versionamento no GitHub
 
 Todo o ecossistema do simulador está versionado sob a branch `main`:
 - **Repositório:** [https://github.com/wederfs40-art/Projetos_Antigravit](https://github.com/wederfs40-art/Projetos_Antigravit)
-- **Filtro `.gitignore`:** Protege o repositório contra pastas temporárias gigantescas geradas pelo motor (`Library/`, `Temp/`, `Logs/`, `Build/`, `UserSettings/`).
-- **Arquivos Versionados:** Todos os scripts C#, prefabs, texturas procedurais, configurações de física/layers do projeto e documentações completas.
+- **Filtro `.gitignore`:** Protege o repositório contra pastas temporárias geradas pelo motor (`Library/`, `Temp/`, `Logs/`, `Build/`, `UserSettings/`).
+- **Arquivos Versionados:** Todos os scripts C#, prefabs, texturas procedurais, modelos FBX importados, configurações de física/layers do projeto e documentações completas.
