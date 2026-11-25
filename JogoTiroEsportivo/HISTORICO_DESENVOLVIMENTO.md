@@ -1,16 +1,16 @@
 # Histórico Completo de Desenvolvimento: Simulador de Tiro Esportivo (IPSC) & Combate Tático
 
 > **Projeto:** Simulador de Tiro em Primeira Pessoa (FPS) Ultra Realista  
-> **Motor Gráfico:** Unity 3D (C#)  
+> **Motor Gráfico:** Unity 3D (C#) — Compatível com Unity 2022 LTS e Unity 6 (6000.x)  
 > **Foco:** Balística Realista, Tiro Esportivo (Regras Oficiais IPSC / Clube de Tiro) e Combate Tático  
 > **Repositório GitHub:** `JogoTiroEsportivo`  
-> **Data de Criação Inicial:** Novembro de 2026  
+> **Data de Atualização:** 25 de Novembro de 2026  
 
 ---
 
 ## 📌 Sumário Executivo
 
-Este documento registra cronologicamente todas as decisões de arquitetura de software, sistemas implementados, códigos-fonte criados, ferramentas procedurais e orientações de montagem desenvolvidas para este simulador. O objetivo foi criar uma base sólida, altamente modular e pronta para produção, que replique com fidelidade física o comportamento de armas de fogo, o cálculo balístico e as regras esportivas de uma pista de IPSC.
+Este documento registra cronologicamente todas as decisões de arquitetura de software, sistemas implementados, códigos-fonte criados, ferramentas procedurais, resolução de problemas no motor gráfico e orientações de montagem desenvolvidas para este simulador. O objetivo foi criar uma base sólida, altamente modular e pronta para produção, que replique com fidelidade física o comportamento de armas de fogo, o cálculo balístico e as regras esportivas de uma pista de IPSC.
 
 ---
 
@@ -72,12 +72,13 @@ Para que o projeto pudesse ser jogado imediatamente sem a necessidade de pacotes
 | Script | Caminho | Finalidade |
 | :--- | :--- | :--- |
 | `PlayerController.cs` | `Assets/Scripts/Player/` | Locomoção FPS em 1ª pessoa (andar, correr, mouse look com clamp vertical). |
-| `IPSCUIManager.cs` | `Assets/Scripts/UI/` | HUD completo em tela: cronômetro dinâmico, último split, contador de munição e painel de resultado com Hit Factor. |
+| `IPSCUIManager.cs` | `Assets/Scripts/UI/` | HUD completo em tela via IMGUI nativo: cronômetro dinâmico, último split, contador de munição e painel de resultado com Hit Factor. |
 | `ProceduralAudio.cs` | `Assets/Scripts/Utilities/` | Síntese de áudio matemática em tempo de execução: bipe senoidal de 2.75 kHz, estampido de tiro 9mm, trava de ferrolho e clique seco de percussor. |
 | `ProceduralMaterials.cs` | `Assets/Scripts/Utilities/` | Geração procedural de texturas de papelão com linhas de zonas IPSC e furos de bala transparentes. |
 | `SceneGeneratorCore.cs` | `Assets/Scripts/Setup/` | Construtor que gera o estande de tiro completo (chão, barreiras de segurança, para-balas, alvos e pistola 3D funcional). |
 | `IPSCSceneBuilder.cs` | `Assets/Scripts/Editor/` | Adiciona o menu **`IPSC Simulator > Montar Pista Completa (Auto-Setup)`** na barra superior do Unity Editor. |
 | `IPSCAutoBootstrap.cs` | `Assets/Scripts/Setup/` | Gatilho para montar automaticamente o cenário caso a cena esteja vazia ao dar Play. |
+| `INICIAR_JOGO.bat` | Raiz do projeto | Launcher seguro para inicializar a Unity com DirectX 11, limpando travas e garantindo estabilidade. |
 
 ---
 
@@ -100,24 +101,53 @@ Para que o projeto pudesse ser jogado imediatamente sem a necessidade de pacotes
 
 ## 🌐 4. Integração com a Unity Asset Store
 
-Durante o planejamento visual, foi orientado o uso de pacotes 3D gratuitos na **Unity Asset Store**:
-- **Pacote Selecionado:** *`Pacote de Armas de Pistola Low-Poly Weapon Pack 1`* (da CASTELO BRAVO).
-- **Motivo da Escolha:** Traz modelos de pistolas semiautomáticas (estilos Glock e 1911/2011) que se alinham perfeitamente à divisão esportiva de IPSC Production e Standard, permitindo que a armação, ferrolho móvel e mira sejam mapeados diretamente nos scripts desenvolvidos.
+Durante o planejamento visual, foi orientado o resgate e a importação de ativos 3D gratuitos na **Unity Asset Store**:
+- **Pacotes Selecionados:**
+  - *`Pacote de Armas de Pistola Low-Poly Weapon Pack 1`* (da CASTELO BRAVO): Pistolas semiautomáticas (estilos Glock e 1911/2011) ideais para divisões IPSC Production e Standard.
+  - *`Low Poly SMG Weapons`*: Submetralhadoras / Carabinas 9mm para simular a divisão oficial **IPSC PCC (Pistol Caliber Carbine)**.
+  - *`Dan Wesson Modelo 715`*: Revólver com massa de fibra ótica para divisão IPSC Revolver.
+- **Ciclo de Vida de Ativos (Open in Unity vs My Assets):**
+  - Clicar em *"Adicionar aos Meus Recursos"* ou *"Open in Unity"* vincula o pacote à licença da conta na nuvem da Unity.
+  - Para que os modelos estejam fisicamente utilizáveis na cena, eles devem ser baixados e importados para o projeto via **`Window > Package Manager > Packages: My Assets`** dentro da Unity, surgindo então na pasta `Assets/`.
 
 ---
 
-## 🚀 5. Preparação para o GitHub
+## 🔬 5. Diagnósticos Técnicos, Solução de Problemas & Estabilidade no Unity 6
 
-Para subir este repositório no GitHub sem carregar arquivos temporários gigantescos do cache da Unity (que podem ultrapassar dezenas de gigabytes desnecessariamente), foi configurado um arquivo `.gitignore` específico para projetos Unity.
+Durante a integração no ambiente local do usuário (Windows 11, Unity 6000.6.10f1, NVIDIA GeForce GTX 1660 SUPER), foram superados quatro desafios críticos de infraestrutura:
 
-### O que sobe para o GitHub:
-- `Assets/` (Scripts, Texturas, Modelos, Cenas, Sons).
-- `ProjectSettings/` (Configurações de tags, layers, física e inputs).
-- `Packages/manifest.json` (Gerenciador de pacotes da Unity).
-- `README_PROJETO.md` e `HISTORICO_DESENVOLVIMENTO.md`.
+### 1. Incompatibilidade com uGUI na Unity 6 (Erro CS0234)
+- **Sintoma:** O Unity Editor impedia o Play com a mensagem: *"All compiler errors have to be fixed before you can enter playmode!"* e erros `CS0234: The type or namespace name 'UI' does not exist in the namespace 'UnityEngine'`.
+- **Causa:** Na Unity 6, o pacote antigo `com.unity.ugui` não vem habilitado por padrão em projetos básicos.
+- **Solução Arquitetural:** Em vez de forçar a instalação do pacote pesado uGUI, o `IPSCUIManager.cs` e o `SceneGeneratorCore.cs` foram refatorados para utilizar a biblioteca nativa `IMGUI` (`OnGUI`).
+- **Resultado:** Zero dependências de pacotes externos, compilação em 3.4 segundos com **0 Erros** e compatibilidade imediata com qualquer versão da Unity (2021, 2022 ou 6.x).
 
-### O que fica de fora (ignorado automaticamente pelo `.gitignore`):
-- `Library/` (Cache gerado localmente pelo motor).
-- `Temp/` e `Obj/` (Arquivos de compilação temporários).
-- `Logs/` e `Build/`.
-- Arquivos de solução do Visual Studio (`*.sln`, `*.csproj`).
+### 2. Módulo WebGL / Web Build Support no Unity Hub
+- **Verificação:** Foi solicitada a instalação do módulo WebGL. No Unity Hub (configurado em português), verificou-se que na Unity 6 a plataforma foi renomeada para **`Web Build Support`** e já estava plenamente instalada (5.62 GB), permitindo compilações futuras para Web/HTML5 diretamente pelo menu `File > Build Profiles`.
+
+### 3. Falha de Importadores Paralelos (AssetImportWorkers) com DirectX 12
+- **Sintoma:** Bloqueio da interface com a barra verde contínua (*"Hold on busy for... Waiting for Unity's code in UnityEditor.CoreModule.dll to finish executing"*), seguido pelo popup do *Unity Bug Reporter*.
+- **Investigação de Logs:**
+  - No `AssetImportWorkerHW1.log`: `d3d12: failed to create D3D12 device (0x887a0004). Crash!!!`
+  - No `AssetImportWorkerHW2.log`: `AssetImportWorkerClient::OnTransportError - code=10061 error=Nenhuma conexão pôde ser feita porque a máquina de destino as recusou ativamente.`
+- **Causa Raiz:** A Unity 6 inicializa por padrão com a API gráfica DirectX 12 (`<DX12>`). Em drivers NVIDIA GeForce GTX 1660 SUPER, os processos secundários de importação (*AssetImportWorkers*) em modo headless falham ao instanciar múltiplos dispositivos D3D12 concorrentes. Ao caírem, a comunicação por socket local (porta TCP 127.0.0.1) é recusada (erro 10061), travando a thread principal de interface.
+- **Soluções Implementadas:**
+  1. Criação do launcher `INICIAR_JOGO.bat` forçando inicialização em **DirectX 11** (`-force-d3d11`), eliminando a falha gráfica na raiz.
+  2. Ajuste em `EditorSettings.asset` para evitar deadlocks de sincronização.
+
+### 4. Esgotamento de Memória Virtual & Corrupção de Cache LMDB
+- **Sintoma:** Cliques repetidos em "Open in Unity" no navegador instanciaram múltiplos processos `Unity.exe` concorrentes no mesmo projeto. O log registrou `GetLastError: Não há recursos de memória disponíveis suficientes para processar este comando`, restando apenas 424 MB de memória virtual.
+- **Corrupção:** O encerramento forçado do processo anterior corrompeu o banco de dados LMDB na pasta `Library/` com ponteiros nulos (`Guid(000000000000)`).
+- **Ação:**
+  1. Finalização de todos os processos zumbis, liberando **4,5 GB de memória RAM**.
+  2. Limpeza profunda das pastas corrompidas `Library/` e `Temp/` (incluindo o arquivo de bloqueio `UnityLockfile`).
+  3. Com isso, na reinicialização o motor recria um banco de dados limpo a partir de `Assets/` sem qualquer loop de falhas.
+
+---
+
+## 🚀 6. Governança e Versionamento no GitHub
+
+Todo o ecossistema do simulador está versionado sob a branch `main`:
+- **Repositório:** [https://github.com/wederfs40-art/Projetos_Antigravit](https://github.com/wederfs40-art/Projetos_Antigravit)
+- **Filtro `.gitignore`:** Protege o repositório contra pastas temporárias gigantescas geradas pelo motor (`Library/`, `Temp/`, `Logs/`, `Build/`, `UserSettings/`).
+- **Arquivos Versionados:** Todos os scripts C#, prefabs, texturas procedurais, configurações de física/layers do projeto e documentações completas.
