@@ -114,14 +114,32 @@ namespace IPSCSimulator.Weapons
             currentAmmo--;
             OnAmmoChanged?.Invoke(currentAmmo, magazineCapacity);
 
-            // 2. Instancia o projétil no cano (Muzzle Point)
-            if (bulletPrefab != null && muzzlePoint != null)
+            // Garante que o muzzlePoint exista
+            if (muzzlePoint == null)
+            {
+                muzzlePoint = transform.Find("MuzzlePoint");
+                if (muzzlePoint == null) muzzlePoint = transform;
+            }
+
+            // 2. Instancia o projétil no cano (Muzzle Point) e garante que esteja ATIVO na cena
+            if (bulletPrefab != null)
             {
                 GameObject bulletObj = Instantiate(bulletPrefab, muzzlePoint.position, muzzlePoint.rotation);
+                bulletObj.SetActive(true); // Impede que o projétil nasça desativado
                 Bullet bulletScript = bulletObj.GetComponent<Bullet>();
                 if (bulletScript != null)
                 {
                     bulletScript.Initialize(muzzleVelocity, muzzlePoint.forward, gravityMultiplier, bulletHoleDecalPrefab, hitLayers);
+                }
+            }
+            else
+            {
+                // Fallback instantâneo direto de Raycast caso o prefab do projétil não esteja presente
+                Vector3 shootOrigin = muzzlePoint.position;
+                Vector3 shootDir = muzzlePoint.forward;
+                if (Physics.Raycast(shootOrigin, shootDir, out RaycastHit hit, 250f, hitLayers, QueryTriggerInteraction.Collide))
+                {
+                    Bullet.ProcessDirectHit(hit, shootDir, bulletHoleDecalPrefab);
                 }
             }
 

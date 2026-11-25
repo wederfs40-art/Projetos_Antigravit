@@ -254,5 +254,74 @@ namespace IPSCSimulator.Utilities
             clip.SetData(samples, 0);
             return clip;
         }
+
+        /// <summary>
+        /// Som de impacto da bala atingindo madeira maciça ou compensado.
+        /// </summary>
+        public static AudioClip CreateWoodImpactClip()
+        {
+            int sampleRate = 44100;
+            float duration = 0.18f;
+            int sampleCount = Mathf.FloorToInt(sampleRate * duration);
+            float[] samples = new float[sampleCount];
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                float t = (float)i / sampleRate;
+                float thud = Mathf.Sin(2 * Mathf.PI * 340f * t) * Mathf.Exp(-t * 40f) * 0.8f;
+                float crack = (Random.value * 2f - 1f) * 0.5f * Mathf.Exp(-t * 25f);
+                samples[i] = Mathf.Clamp(thud + crack, -1f, 1f);
+            }
+
+            AudioClip clip = AudioClip.Create("Wood_Impact", sampleCount, 1, sampleRate, false);
+            clip.SetData(samples, 0);
+            return clip;
+        }
+
+        /// <summary>
+        /// Som de impacto da bala atingindo chapa metálica ou barril (estalo agudo + tinido).
+        /// </summary>
+        public static AudioClip CreateMetalImpactClip()
+        {
+            int sampleRate = 44100;
+            float duration = 0.25f;
+            int sampleCount = Mathf.FloorToInt(sampleRate * duration);
+            float[] samples = new float[sampleCount];
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                float t = (float)i / sampleRate;
+                float ping = (Mathf.Sin(2 * Mathf.PI * 2200f * t) * 0.7f + Mathf.Sin(2 * Mathf.PI * 4100f * t) * 0.4f) * Mathf.Exp(-t * 22f);
+                float crack = (Random.value * 2f - 1f) * 0.4f * Mathf.Exp(-t * 80f);
+                samples[i] = Mathf.Clamp(ping + crack, -1f, 1f);
+            }
+
+            AudioClip clip = AudioClip.Create("Metal_Impact", sampleCount, 1, sampleRate, false);
+            clip.SetData(samples, 0);
+            return clip;
+        }
+
+        /// <summary>
+        /// Som de impacto em concreto ou cascalho (estalo seco e arenoso).
+        /// </summary>
+        public static AudioClip CreateConcreteImpactClip()
+        {
+            int sampleRate = 44100;
+            float duration = 0.20f;
+            int sampleCount = Mathf.FloorToInt(sampleRate * duration);
+            float[] samples = new float[sampleCount];
+
+            for (int i = 0; i < sampleCount; i++)
+            {
+                float t = (float)i / sampleRate;
+                float thump = Mathf.Sin(2 * Mathf.PI * 180f * t) * Mathf.Exp(-t * 60f) * 0.9f;
+                float grit = (Random.value * 2f - 1f) * 0.6f * Mathf.Exp(-t * 30f);
+                samples[i] = Mathf.Clamp(thump + grit, -1f, 1f);
+            }
+
+            AudioClip clip = AudioClip.Create("Concrete_Impact", sampleCount, 1, sampleRate, false);
+            clip.SetData(samples, 0);
+            return clip;
+        }
     }
 }

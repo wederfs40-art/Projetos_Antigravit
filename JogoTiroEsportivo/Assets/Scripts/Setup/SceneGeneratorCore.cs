@@ -428,6 +428,11 @@ namespace IPSCSimulator.Setup
             crate.transform.localPosition = pos;
             crate.transform.localScale = scale;
             crate.GetComponent<MeshRenderer>().material = mat;
+
+            Rigidbody rb = crate.AddComponent<Rigidbody>();
+            rb.mass = 35f;
+            rb.linearDamping = 0.8f;
+            rb.angularDamping = 0.8f;
         }
 
         // =========================================================================
@@ -1318,6 +1323,11 @@ namespace IPSCSimulator.Setup
             barrel.transform.position = pos;
             barrel.transform.localScale = new Vector3(0.62f, 0.48f, 0.62f);
             barrel.GetComponent<MeshRenderer>().material = mat;
+
+            Rigidbody rb = barrel.AddComponent<Rigidbody>();
+            rb.mass = 12f;
+            rb.linearDamping = 0.5f;
+            rb.angularDamping = 0.5f;
         }
 
         private static void CreateShootingBox(Transform parent, Vector3 center, Material mat)
