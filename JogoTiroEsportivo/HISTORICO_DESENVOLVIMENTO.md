@@ -235,3 +235,132 @@ Todo o ecossistema do simulador está versionado sob a branch `main`:
 - **Repositório:** [https://github.com/wederfs40-art/Projetos_Antigravit](https://github.com/wederfs40-art/Projetos_Antigravit)
 - **Filtro `.gitignore`:** Protege o repositório contra pastas temporárias geradas pelo motor (`Library/`, `Temp/`, `Logs/`, `Build/`, `UserSettings/`).
 - **Arquivos Versionados:** Todos os scripts C#, prefabs, texturas procedurais, modelos FBX importados, configurações de física/layers do projeto e documentações completas.
+
+---
+
+## 🗣️ 11. Diálogo Detalhado com o Usuário & Análise Comparativa Hiper-Realista
+
+Em 25 de Novembro de 2026, o usuário enviou uma série de feedbacks críticos, capturas de tela e 3 imagens de referência de títulos AAA da indústria de jogos táticos hiper-realistas (*Escape from Tarkov*, *Unrecord* e o fenômeno da Steam *BODYCAM*), apontando aspectos onde o protótipo inicial carecia de imersão e realismo:
+
+### 1. Críticas e Apontamentos Registrados do Usuário:
+1. **Sensação Visual de "AutoCAD / Minecraft":**
+   > *"ficou assim tem movimento com as setas mas parece ser apenas um cenario para design 3D... tipo autocad"*
+   > *"Graficos péssimos so.. falta realismo nao tem objetos"*
+   > *"proque tudo continua quadrado.. nao esta realista como pedi"*
+2. **Arma Flutuando sem Braços e Sem Ação Mecânica Real:**
+   > *"Outro detalhe que nao vi .. opção para selecionar armas, nem a ação das armas (realista) com movimento, capsula ejetando, recarregar magazine (carregador) ao acabar as munições, os alvos parecem nao estarem sendo afetados... a ar,a parece estar flutuando no ar... eu quero realismo ... pois ate o jogo DOOM da decada de 80 é mais real que isso kkk, tem a mao do usuario a arma movimenta os disparos tem o coiçe da arma etc.."*
+3. **Imagens de Referência Fornecidas pelo Usuário:**
+   - **Referência 1 (Escape from Tarkov):** Operador em 1ª pessoa segurando fuzil tático customizado com mira holográfica e luvas de combate em cais portuário realista com iluminação natural e reflexos de água.
+   - **Referência 2 (Unrecord):** Visão de câmera corporal fisheye em galpão abandonado com veículos, escombros e mira livre corporal (*Deadzone Aim*).
+   - **Referência 3 (Steam - BODYCAM: 32 mil jogadores simultâneos):** Policial em treinamento tático dentro de uma Killhouse com paredes de compensado naval / OSB cru montada sobre vigas de madeira 2x4 dentro de um grande hangar industrial com treliças de aço no teto.
+4. **Dúvida Operacional sobre a Antigravity IDE:**
+   - O usuário compartilhou captura de tela com o popup:
+     > *"As atualizações estão desabilitadas porque você está executando a instalação de Antigravity IDE do escopo do usuário como Administrador."*
+
+---
+
+## 🏗️ 12. Implementação do Cenário "Killhouse Policial em Compensado" (Estilo BODYCAM)
+
+Para atender diretamente à **Imagem de Referência 3** fornecida pelo usuário, foi desenvolvido um novo cenário tático ultraespecífico (`EnvironmentType.Bodycam_ShootHouse`):
+
+1. **Estrutura do Hangar Industrial:**
+   - Galpão de teto alto com estrutura em tesouras treliçadas de vigas de aço (`CreateTrussSteelMaterial`).
+   - Conjunto de luminárias industriais fluorescentes suspensas, reproduzindo os pontos de luz zenital observados na foto do jogo *Bodycam*.
+2. **Paredes Modulares em Vigas 2x4 e Compensado/OSB:**
+   - Criação de gerador de material PBR procedural `CreatePlywoodOSBMaterial` e textura `CreatePlywoodOSBTexture` com veios de madeira prensada, nós de pinho e acabamento fosco realista.
+   - Labirinto de invasão tática para combate em ambientes confinados (*CQB - Close Quarters Battle*), corredores estreitos de progressão policial e salas de varredura de cantos (*corner clearing*).
+   - Baterias de alvos de papelão IPSC e poppers metálicos posicionados em pontos cegos estratégicos.
+3. **Integração no Editor:**
+   - Adicionada a opção direta **`IPSC Simulator > Cenários Diretos > 6. Killhouse Policial em Compensado (Estilo BODYCAM)`** no menu superior do Unity Editor.
+
+---
+
+## 🧤 13. Braços e Luvas Táticas em 1ª Pessoa (`AttachTacticalHands`)
+
+Solucionou-se definitivamente a queixa de *"arma flutuando no ar estilo DOOM de 1980"*:
+
+1. **Geometria Anatômica dos Membros Superiores:**
+   - Função `AttachTacticalHands(holder, weaponType)` em `SceneGeneratorCore.cs`.
+   - Modela antebraços posicionados realisticamente a partir da base da visão do jogador, com mangas de uniforme tático camuflado militar.
+2. **Luvas de Combate de Couro e Kevlar:**
+   - Modelagem de luvas táticas escuras com reforço acolchoado e placas protetoras nos nós dos dedos (*knuckle guard*).
+   - Palma e dedos modelados ergonomicamente:
+     - Mão direita empunhando a coronha/grip da arma, com o dedo indicador repousando sobre o gatilho.
+     - Mão esquerda em empunhadura tática a duas mãos (*thumbs-forward grip*), prestando suporte firme sob a armação e guarda-mato da arma.
+
+---
+
+## 💥 14. Ação Mecânica Realista das Armas, Coice e Ejeção Física de Cápsulas
+
+Implementação em `Weapon.cs`, `WeaponHandling.cs` e `ProceduralAudio.cs`:
+
+1. **Coiçe e Elevação do Cano (Recoil Kick):**
+   - Disparo agora aplica recuo físico tridimensional translacional (`recoilKickPosition`), empurrando a arma e os braços para trás no eixo Z.
+   - Elevação angular instantânea do cano (`muzzleClimb`), obrigando o jogador a compensar o recuo para manter a precisão nos disparos subsequentes (*double taps*).
+2. **Ejeção Física de Cápsulas de Latão (Brass Casing Ejection):**
+   - Método `EjectBrassCasing()` em `Weapon.cs`:
+     - Instancia em tempo de execução um cilindro 3D de latão dourado metálico na janela de ejeção da arma (`ejectionPort`).
+     - Adiciona componente de física real `Rigidbody` e aplica força vetorial lateral para a direita e para cima com torque angular aleatório, fazendo a cápsula rodopiar no ar.
+     - Efeito sonoro procedural de quique metálico de cápsula no chão (`CreateCasingBounceClip`).
+     - Autodestruição programada da cápsula após 3 segundos para manter o desempenho e a taxa de quadros (FPS).
+3. **Muzzle Flash Iluminado:**
+   - Clarão de luz dinâmica pontual acoplado à ponta do cano, iluminando a própria arma, os braços do atirador e as paredes próximas por 0,04s a cada tiro.
+4. **Animação Realista de Recarregamento de Carregador (Magazine):**
+   - Corrotina `ReloadAnimationCoroutine()`:
+     - O carregador (magazine) desce fisicamente da empunhadura com som mecânico de desengate (`MagOut`).
+     - Novo carregador sobe e trava com clique audível (`MagIn`).
+     - O ferrolho/slide cicla para frente destravando a câmara (`SlideRack`), restaurando a capacidade total de munições.
+
+---
+
+## 🎯 15. Correção da Balística e Reatividade Física dos Alvos
+
+### Diagnóstico Técnico da Queixa: *"Os alvos parecem não estar sendo afetados"*
+- **Causa Raiz 1 (LayerMask):** No script `Weapon.cs`, a variável `hitLayers` estava serializada sem valor inicial, assumindo valor padrão `0` (`Nothing`). Como consequência, o `Physics.Raycast` ignorava todos os colisores de alvo.
+- **Causa Raiz 2 (Decalque Inativo):** O prefab de furo de bala (`bulletHoleDecalPrefab`) era instanciado a partir de um template inativo e não possuía a chamada `decal.SetActive(true)`.
+
+### Soluções Aplicadas:
+1. **Ativação Universal de Colisão:** `hitLayers = ~0` (colide com todas as camadas).
+2. **Reação Física e Vibração Cinética (`ImpactWiggleCoroutine`):**
+   - Ao receber o impacto da bala, o alvo de papelão inclina-se para trás no eixo X simulando a transferência de energia cinética do projétil, oscilando e retornando elasticamente à posição vertical.
+3. **Áudio de Perfuração de Papelão:**
+   - Implementado `CreateCardboardImpactClip()` com envelope de ruído branco filtrado, reproduzindo o estalo característico de perfuração de papelão grosso de alvo de tiro.
+4. **Furos de Bala Imediatos:**
+   - Decalques de perfuração posicionados na normal exata do impacto e ativados no momento do disparo.
+5. **Feedback Visual Instantâneo:**
+   - Banner HUD colorido no topo da tela indicando a zona alvejada (`🎯 Target - ALPHA (+5 pts)`, `CHARLIE (+3 pts)`, `DELTA (+1 pt)` ou `⛔ NO-SHOOT (-10 pts)`).
+
+---
+
+## 📹 16. Sistema de Câmera Corporal Policial (`BodycamCameraController.cs`)
+
+Para entregar a estética do jogo *BODYCAM* e *UNRECORD*:
+
+1. **Mira Livre (Free Aim / Deadzone):**
+   - A arma e os braços se movem levemente na tela antes que toda a câmera/corpo gire (zona morta de até ±4°).
+   - Quando o limite é atingido, o tronco do operador acompanha a mira com velocidade angular realista (`bodyFollowSpeed`).
+2. **Inércia e Balanço de Colete Tático (Vest Bobbing):**
+   - Movimentação com física de oscilação baseada na velocidade de passada do operador.
+3. **Vinheta Óptica e Carimbo Policial:**
+   - Efeito visual de lente de câmera com vinheta periférica escurecida e carimbo tático de gravação no canto superior: `REC ● BODYCAM-04`.
+
+---
+
+## 🔫 17. Hotbar Visual de Arsenal e Troca Rápida de Armas
+
+1. **Hotbar Permanente na Tela:**
+   - Barra na parte inferior da tela com botões visuais: `[1] 🔫 Pistola 9mm | [2] 🤠 Dan Wesson .357 | [3] ⚡ SMG Tática`.
+2. **Troca em Tempo Real:**
+   - Pressionar as teclas de número `[1]`, `[2]`, `[3]` (ou teclado numérico) ou girar a **roda do mouse (Scroll Wheel)** troca o armamento em mãos instantaneamente sem pausar a simulação.
+
+---
+
+## 💡 18. Esclarecimento Técnico: Notificação de Administrador na Antigravity IDE
+
+- **Mensagem Recebida pelo Usuário:**
+  > *"As atualizações estão desabilitadas porque você está executando a instalação de Antigravity IDE do escopo do usuário como Administrador."*
+- **Explicação:**
+  - Esse aviso é nativo da plataforma VS Code / Electron quando instalada na pasta de usuário (`AppData\Local\Programs`) e executada com privilégios elevados de Administrador no Windows.
+  - O sistema suspende a verificação em segundo plano de downloads automáticos para prevenir conflitos de permissões entre a conta Administrador e o perfil de usuário comum.
+- **Orientação:**
+  - Pode-se clicar tranquilamente em **"Não Mostrar Novamente"**. Não há qualquer prejuízo para os scripts C#, para a compilação ou para a execução do Unity Editor.

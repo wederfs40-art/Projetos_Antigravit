@@ -11,7 +11,7 @@ Você **não precisa modelar nem configurar nada manualmente**:
 1. Abra o projeto no **Unity Editor** (versão recomendada: **Unity 6.3 LTS `6000.3.29f1`** ou superior com `-force-d3d11`).
 2. Aperte o botão **PLAY (▶️)** no topo da Unity!
 3. O **Menu Principal** abrirá automaticamente na tela, permitindo que você:
-   - Escolha entre **5 Ambientes de Treinamento e Combate**.
+   - Escolha entre **6 Ambientes de Treinamento e Combate** (incluindo o novo *Killhouse Policial em Compensado estilo BODYCAM*).
    - Escolha sua **Arma** (Pistola 9mm, Revólver Dan Wesson .357 ou SMG Tática).
    - Clique em **"INICIAR SIMULAÇÃO"** para entrar na pista!
 
@@ -29,10 +29,14 @@ Você **não precisa modelar nem configurar nada manualmente**:
 | **IPSC Outdoor - Pista Longa** | Esportivo | 32 disparos, estande de 30 metros de profundidade, para-balas elevados, alvos móveis/distantes e bateria de poppers de aço. |
 | **Estande Indoor de Precisão** | Clube Fechado | Piso de concreto polido escuro, paredes acústicas, 4 cabines individuais de tiro com marcadores de distância a 5m, 10m, 15m, 20m e 25m. |
 | **Killhouse Tático CS-Style** | Combate CQB | Cenário fechado inspirado em mapas táticos com contêineres de carga de 6m (vermelhos e azuis), caixas militares de suprimentos, tambores de óleo, esquinas de varredura (*corner clearing*) e silhuetas de ameaça hostil mescladas com reféns civis (*No-Shoot*). |
+| **Killhouse Policial em Compensado (Estilo BODYCAM)** | Policial / CQB | Inspirado no fenômeno da Steam *BODYCAM*. Hangar industrial com treliças de aço estruturais no teto, lâmpadas fluorescentes suspensas, labirinto de paredes em compensado/OSB cru sobre vigas de madeira 2x4, salas de progressão tática e alvos reativos. |
 
 ---
 
-## 🔫 Arsenal Disponível
+## 🔫 Arsenal Disponível & Braços Táticos em 1ª Pessoa
+
+- **Braços e Luvas Táticas (`AttachTacticalHands`):** Antebraços modelados com mangas de combate camufladas e luvas táticas de couro e Kevlar com nós reforçados, empunhando a arma realisticamente a duas mãos (dedo indicador no gatilho).
+- **Ação Mecânica Realista:** Recoil kick com elevação do cano (`muzzleClimb`), ejeção física de cápsulas/estojos de latão com força lateral e quique no chão, flash dinâmico no cano e animação de recarregamento com troca de carregador (`[R]`).
 
 1. **Pistola Tática 9mm:**
    - 17 disparos por carregador, semiautomática, excelente equilíbrio de recuo e cadência, mira com massa de fibra ótica de alta visibilidade.
@@ -48,11 +52,12 @@ Você **não precisa modelar nem configurar nada manualmente**:
 | Tecla / Ação | Função |
 | :--- | :--- |
 | **W, A, S, D** | Movimentação pelo cenário |
-| **Mouse** | Olhar / Mirar a visão |
+| **Mouse** | Olhar / Mirar a visão (com Free Aim de Câmera Corporal) |
+| **[1], [2], [3]** ou **Scroll do Mouse** | **Troca Rápida de Arma**: Alterna instantaneamente entre Pistola 9mm, Dan Wesson .357 e SMG |
 | **Botão Direito (Segurar)** | **ADS (Aim Down Sights)**: Alinha alça, massa de mira e alvo perfeitamente |
 | **Shift Esquerdo (Segurar)** | **Prender a Respiração**: Amortece o balanço natural em 80% |
 | **Botão Esquerdo** | **Disparar**: Semiautomático ou Automático contínuo (SMG) |
-| **R** | **Recarregar**: Alimenta munição completa e fecha o ferrolho |
+| **R** | **Recarregar**: Animação de descida e inserção de carregador novo e ciclado de ferrolho |
 | **T** | **Comando do RO (Range Officer)**: Dá *"Standby"*, aguarda delay aleatório e soa o **BEEP!** |
 | **Y** | **Encerrar Pista**: Para o cronômetro, soma pontos/penalidades e exibe o **Hit Factor** |
 | **U** | **Obrear / Resetar**: Remove furos de bala e levanta os poppers de aço caídos |
@@ -62,18 +67,19 @@ Você **não precisa modelar nem configurar nada manualmente**:
 
 ## 📁 Estrutura de Código
 
+- `Assets/Scripts/Player/BodycamCameraController.cs` - Física de câmera corporal com Free Aim (zona morta de mira), inércia de passada de colete balístico e vinheta de lente com carimbo REC.
+- `Assets/Scripts/Player/PlayerController.cs` - Locomoção e câmera em 1ª pessoa integrada à física corporal.
 - `Assets/Scripts/Ballistics/Bullet.cs` - Balística contínua por Raycast (anti-tunneling) e gravidade física real.
-- `Assets/Scripts/Weapons/Weapon.cs` - Cano no Muzzle Point (Height-Over-Bore), munição, slide lock e cadência automática/semi.
-- `Assets/Scripts/Weapons/WeaponHandling.cs` - Visada precisa (ADS), respiração harmônica e recuo elástico amortecido.
-- `Assets/Scripts/Targets/IPSCTarget.cs` & `IPSCTargetZone.cs` - Zonas pontuadas oficiais (A, C, D e NS), decalques de furos de bala e obreamento.
+- `Assets/Scripts/Weapons/Weapon.cs` - Altura de cano (Height-Over-Bore), munição, ejeção física de cápsulas de latão, recoil kick, animação de magazine e luz de muzzle.
+- `Assets/Scripts/Weapons/WeaponHandling.cs` - Visada precisa (ADS), respiração harmônica, amortecimento de recuo e troca rápida de armas (`[1]`, `[2]`, `[3]`, scroll).
+- `Assets/Scripts/Targets/IPSCTarget.cs` & `IPSCTargetZone.cs` - Zonas pontuadas oficiais (A, C, D e NS), decalques de furos de bala visíveis, áudio de perfuração de papelão e oscilação de impacto.
 - `Assets/Scripts/Targets/IPSCSteelPopper.cs` - Pratos metálicos reativos com física de queda (-85°), áudio metálico procedural e reset.
 - `Assets/Scripts/Match/RangeOfficerTimer.cs` - Cronometragem oficial em centésimos, splits entre tiros e cálculo do Hit Factor.
 - `Assets/Scripts/Match/TacticalGameManager.cs` - Singleton de gerenciamento de estados (`MainMenu`, `Playing`, `Paused`), transição de mapas e cursor.
 - `Assets/Scripts/Match/GameEnums.cs` - Enumerações oficiais de mapas, armas e estados.
 - `Assets/Scripts/UI/MainMenuManager.cs` - Menu Principal militar e Menu de Pausa (`ESC`).
-- `Assets/Scripts/UI/IPSCUIManager.cs` - HUD do cronômetro, munição, splits e pontuação final.
-- `Assets/Scripts/Player/PlayerController.cs` - Locomoção e câmera em 1ª pessoa.
-- `Assets/Scripts/Utilities/ProceduralAudio.cs` - Síntese matemática de áudios (bipe IPSC, tiros 9mm, .357 Magnum, SMG e impactos metálicos).
-- `Assets/Scripts/Utilities/ProceduralMaterials.cs` - Geração PBR de texturas para alvos, madeira, asfalto, tambores, caixas e aço.
-- `Assets/Scripts/Setup/SceneGeneratorCore.cs` & `IPSCAutoBootstrap.cs` - Construtores de ambientes e arsenal.
+- `Assets/Scripts/UI/IPSCUIManager.cs` - HUD do cronômetro, munição, splits, banners de acerto de alvos e Hotbar visual de arsenal.
+- `Assets/Scripts/Utilities/ProceduralAudio.cs` - Síntese matemática de áudios (bipe IPSC, tiros 9mm, .357 Magnum, SMG, impactos em papelão, quique de cápsulas e recarga de pente).
+- `Assets/Scripts/Utilities/ProceduralMaterials.cs` - Geração PBR de texturas para alvos, madeira compensada OSB, treliças de aço, asfalto, tambores, caixas e aço balístico.
+- `Assets/Scripts/Setup/SceneGeneratorCore.cs` & `IPSCAutoBootstrap.cs` - Construtores de ambientes, montagem de braços/luvas táticas e gerenciamento de arsenal.
 - `Assets/Scripts/Editor/IPSCSceneBuilder.cs` - Atalhos do menu superior do Unity Editor.
