@@ -1,13 +1,17 @@
 @echo off
-title Abrindo Simulador IPSC na Unity
+title Abrindo Simulador IPSC na Unity (Modo Estavel DirectX 11)
 echo ====================================================
-echo  Iniciando Unity com DirectX 11 Estavel...
+echo  Limpando processos e travas do Unity...
 echo ====================================================
 
 taskkill /F /IM UnityCrashHandler64.exe >nul 2>&1
-del /F /Q "D:\weder\IAs\Antigravit\Projetos_Antigravit\JogoTiroEsportivo\Temp\UnityLockfile" >nul 2>&1
+del /F /Q "%~dp0Temp\UnityLockfile" >nul 2>&1
 
-start "" "C:\Program Files\Unity\Hub\Editor\6000.6.10f1\Editor\Unity.exe" -projectpath "D:\weder\IAs\Antigravit\Projetos_Antigravit\JogoTiroEsportivo" -force-d3d11
+echo ====================================================
+echo  Iniciando Unity com DirectX 11 Estavel (-force-d3d11)...
+echo ====================================================
 
-echo Unity iniciada! Voce ja pode fechar esta janela preta.
+start "" "C:\Program Files\Unity\Hub\Editor\6000.6.10f1\Editor\Unity.exe" -projectpath "%~dp0." -force-d3d11
+
+echo Unity iniciada em modo estavel! Voce ja pode fechar esta janela.
 exit

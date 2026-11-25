@@ -143,6 +143,20 @@ Durante a integração no ambiente local do usuário (Windows 11, Unity 6000.6.1
   2. Limpeza profunda das pastas corrompidas `Library/` e `Temp/` (incluindo o arquivo de bloqueio `UnityLockfile`).
   3. Com isso, na reinicialização o motor recria um banco de dados limpo a partir de `Assets/` sem qualquer loop de falhas.
 
+### 5. Deadlock no Loop Principal (`Application.TickGlobalCallbacks`) e Crash do Burst JIT em DX12
+- **Sintoma:** A interface do Unity Editor congelou indefinidamente com o diálogo modal *"Hold on (busy for 26:47)... Application.TickGlobalCallbacks / Waiting for Unity's code to finish executing"*. No Gerenciador de Tarefas, o processo principal apresentava 0% de CPU com o subprocesso *Unity Crash Handler* ativo e a janela do *Unity Bug Reporter* em segundo plano.
+- **Diagnóstico Técnico via Logs:**
+  - O arquivo `Logs/Editor.log` registrou uma exceção nativa fatal de violação de acesso:
+    `Library\BurstCache\JIT\6502de7465e721a809806fc4a4921394.dll: ERROR: SymGetSymFromAddr64, GetLastError: 'Tentativa de acessar endereço inválido.'`
+  - Esse crash ocorreu pela instabilidade entre o compilador JIT do **Burst** e o backend gráfico experimental **DirectX 12 (`<DX12>`)** da versão prévia **Unity 6.6 (`6000.6.10f1`)** na placa NVIDIA GeForce GTX 1660 SUPER.
+  - Ao ocorrer a falha, o executável `UnityCrashHandler64.exe` pausou a thread de execução da engine para coletar o dump de memória, gerando um deadlock irreversível onde o contador de tempo subia indefinidamente sem que o processo pudesse se recuperar sozinho.
+- **Ações Corretivas Executadas:**
+  1. Finalização imediata de instâncias do `UnityCrashHandler64.exe` e processos filhos.
+  2. Purga completa do diretório `Library/BurstCache/` para eliminar binários JIT corrompidos.
+  3. Limpeza das travas de concorrência em `Temp/UnityLockfile`.
+  4. Atualização do script `INICIAR_JOGO.bat` com parâmetro `-force-d3d11` (DirectX 11 estável).
+  5. Instrução para parametrização nativa no Unity Hub com o argumento de inicialização estável.
+
 ---
 
 ## 🚀 6. Governança e Versionamento no GitHub
