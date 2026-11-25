@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace IPSCSimulator.Setup
 {
@@ -23,7 +22,7 @@ namespace IPSCSimulator.Setup
         {
             Debug.Log("[IPSC Setup] Iniciando montagem procedural do estande de tiro...");
 
-            // 1. Limpeza ou organização inicial
+            // 1. Organização inicial
             GameObject root = new GameObject("--- IPSC SHOOTING RANGE ---");
 
             // 2. Materiais básicos
@@ -97,13 +96,14 @@ namespace IPSCSimulator.Setup
             roAudio.playOnAwake = false;
             RangeOfficerTimer timer = roObj.AddComponent<RangeOfficerTimer>();
 
-            // Injeta propriedades privadas do timer via reflexão amigável
             SetFieldValue(timer, "audioSource", roAudio);
             SetFieldValue(timer, "beepSound", ProceduralAudio.CreateTimerBeepClip());
             SetFieldValue(timer, "stageTargets", targetsList);
 
-            // 9. Canvas e UI
-            CreateIPSCUI(root.transform);
+            // 9. HUD Manager (IMGUI sem dependência de uGUI)
+            GameObject hudObj = new GameObject("IPSC_HUD_Manager");
+            hudObj.transform.SetParent(root.transform);
+            hudObj.AddComponent<IPSCUIManager>();
 
             Debug.Log("[IPSC Setup] Estande montado com sucesso! Pressione PLAY e aperte 'T' para iniciar a pista.");
         }
@@ -215,7 +215,7 @@ namespace IPSCSimulator.Setup
             Material targetMat = ProceduralMaterials.CreateMaterial(Color.white, isNoShoot ? "Mat_TargetNoShoot" : "Mat_TargetIPSC", 0.1f);
             targetMat.mainTexture = ProceduralMaterials.CreateIPSCTargetTexture(isNoShoot);
             board.GetComponent<MeshRenderer>().material = targetMat;
-            Object.DestroyImmediate(board.GetComponent<Collider>()); // Colisores ficam nas zonas
+            Object.DestroyImmediate(board.GetComponent<Collider>());
 
             // Zona Alpha (Centro: 15cm x 32cm)
             CreateTargetZone(targetObj.transform, "Zone_Alpha", Vector3.zero, new Vector3(0.15f, 0.32f, 0.02f), isNoShoot ? IPSCZoneType.NoShoot : IPSCZoneType.Alpha, targetScript);
@@ -271,7 +271,7 @@ namespace IPSCSimulator.Setup
             // Suporte da Arma (WeaponHolder)
             GameObject holder = new GameObject("WeaponHolder");
             holder.transform.SetParent(camObj.transform);
-            holder.transform.localPosition = new Vector3(0.18f, -0.22f, 0.42f); // Posição de quadril
+            holder.transform.localPosition = new Vector3(0.18f, -0.22f, 0.42f);
 
             WeaponHandling handling = holder.AddComponent<WeaponHandling>();
 
@@ -329,7 +329,7 @@ namespace IPSCSimulator.Setup
             // Muzzle Point (cano real da arma com Height-Over-Bore)
             GameObject muzzle = new GameObject("MuzzlePoint");
             muzzle.transform.SetParent(pistol.transform);
-            muzzle.transform.localPosition = new Vector3(0f, 0.015f, 0.14f); // Abaixo da linha de mira!
+            muzzle.transform.localPosition = new Vector3(0f, 0.015f, 0.14f);
 
             // Componente Weapon
             Weapon weapon = pistol.AddComponent<Weapon>();
@@ -349,85 +349,9 @@ namespace IPSCSimulator.Setup
             SetFieldValue(handling, "weapon", weapon);
             SetFieldValue(handling, "weaponTransform", holder.transform);
             SetFieldValue(handling, "hipPosition", new Vector3(0.18f, -0.22f, 0.42f));
-            SetFieldValue(handling, "adsPosition", new Vector3(0f, -0.0465f, 0.32f)); // Alinhamento matemático com a mira frontal!
+            SetFieldValue(handling, "adsPosition", new Vector3(0f, -0.0465f, 0.32f));
 
             return player;
-        }
-
-        private static void CreateIPSCUI(Transform parent)
-        {
-            GameObject canvasObj = new GameObject("IPSC_HUD_Canvas");
-            canvasObj.transform.SetParent(parent);
-
-            Canvas canvas = canvasObj.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvasObj.AddComponent<CanvasScaler>();
-            canvasObj.AddComponent<GraphicRaycaster>();
-
-            Font defaultFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
-            if (defaultFont == null) defaultFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-
-            // Painel Superior do Shot Timer
-            GameObject timerPanel = CreateUIPanel(canvasObj.transform, "TimerPanel", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0, -60), new Vector2(360, 90), new Color(0, 0, 0, 0.65f));
-
-            Text statusText = CreateUIText(timerPanel.transform, "StatusText", "Pressione [T] para Standby", 16, defaultFont, Color.yellow, new Vector2(0, 20), TextAnchor.MiddleCenter);
-            Text timerText = CreateUIText(timerPanel.transform, "TimerText", "00.00s", 34, defaultFont, Color.white, new Vector2(0, -15), TextAnchor.MiddleCenter);
-
-            // Split lateral
-            Text splitText = CreateUIText(canvasObj.transform, "SplitText", "Split: --", 20, defaultFont, Color.cyan, new Vector2(160, -115), TextAnchor.MiddleLeft);
-
-            // Contador de Munição (inferior direito)
-            GameObject ammoPanel = CreateUIPanel(canvasObj.transform, "AmmoPanel", new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-100, 50), new Vector2(160, 60), new Color(0, 0, 0, 0.7f));
-            Text ammoText = CreateUIText(ammoPanel.transform, "AmmoText", "17 / 17", 26, defaultFont, Color.white, Vector2.zero, TextAnchor.MiddleCenter);
-
-            // Painel de Resultados (Sumário Final)
-            GameObject resultPanel = CreateUIPanel(canvasObj.transform, "ResultPanel", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(500, 380), new Color(0.08f, 0.08f, 0.1f, 0.94f));
-            Text summaryText = CreateUIText(resultPanel.transform, "SummaryText", "Resumo da Pista", 18, defaultFont, Color.white, Vector2.zero, TextAnchor.MiddleCenter);
-            resultPanel.SetActive(false);
-
-            // Script UI Manager
-            IPSCUIManager uiManager = canvasObj.AddComponent<IPSCUIManager>();
-            SetFieldValue(uiManager, "timerStatusText", statusText);
-            SetFieldValue(uiManager, "currentTimeText", timerText);
-            SetFieldValue(uiManager, "lastSplitText", splitText);
-            SetFieldValue(uiManager, "ammoCounterText", ammoText);
-            SetFieldValue(uiManager, "resultPanel", resultPanel);
-            SetFieldValue(uiManager, "resultSummaryText", summaryText);
-        }
-
-        private static GameObject CreateUIPanel(Transform parent, string name, Vector2 anchorMin, Vector2 anchorMax, Vector2 anchoredPos, Vector2 size, Color color)
-        {
-            GameObject panel = new GameObject(name);
-            panel.transform.SetParent(parent, false);
-
-            RectTransform rect = panel.AddComponent<RectTransform>();
-            rect.anchorMin = anchorMin;
-            rect.anchorMax = anchorMax;
-            rect.pivot = anchorMin;
-            rect.anchoredPosition = anchoredPos;
-            rect.sizeDelta = size;
-
-            Image img = panel.AddComponent<Image>();
-            img.color = color;
-            return panel;
-        }
-
-        private static Text CreateUIText(Transform parent, string name, string text, int fontSize, Font font, Color color, Vector2 anchoredPos, TextAnchor align)
-        {
-            GameObject textObj = new GameObject(name);
-            textObj.transform.SetParent(parent, false);
-
-            RectTransform rect = textObj.AddComponent<RectTransform>();
-            rect.anchoredPosition = anchoredPos;
-            rect.sizeDelta = new Vector2(480, 280);
-
-            Text t = textObj.AddComponent<Text>();
-            t.text = text;
-            t.font = font;
-            t.fontSize = fontSize;
-            t.color = color;
-            t.alignment = align;
-            return t;
         }
 
         private static void SetFieldValue(object target, string fieldName, object value)
