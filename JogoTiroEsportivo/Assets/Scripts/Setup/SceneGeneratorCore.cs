@@ -1,5 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace IPSCSimulator.Setup
 {
@@ -481,7 +484,6 @@ namespace IPSCSimulator.Setup
             gunRoot.transform.localPosition = Vector3.zero;
             gunRoot.transform.localRotation = Quaternion.identity;
 
-            // Tenta carregar modelo importado ou cria procedural de alta qualidade
             GameObject muzzleObj = new GameObject("MuzzlePoint");
             muzzleObj.transform.SetParent(gunRoot.transform);
 
@@ -492,35 +494,120 @@ namespace IPSCSimulator.Setup
             bool isAuto = false;
             float recoilMult = 1.0f;
             Vector3 adsPos = new Vector3(0f, -0.0465f, 0.32f);
+            Vector3 hipPos = new Vector3(0.18f, -0.22f, 0.42f);
 
+            GameObject modelInstance = null;
+
+#if UNITY_EDITOR
+            string prefabPath = null;
             switch (weaponType)
             {
                 case SelectedWeaponType.Pistol_9mm:
-                    capacity = 17;
-                    velocity = 380f;
-                    isAuto = false;
-                    recoilMult = 1.0f;
-                    adsPos = new Vector3(0f, -0.0465f, 0.32f);
-                    slideObj = BuildDetailedPistolMesh(gunRoot.transform, muzzleObj.transform, matMetal, matSlide, matFiber, matBrass);
+                    prefabPath = "Assets/Low Poly Pistol Weapon Pack 1/Prefabs/Weapons/Pistol_A.prefab";
                     break;
-
                 case SelectedWeaponType.Revolver_DanWesson:
-                    capacity = 6;
-                    velocity = 450f;
-                    isAuto = false;
-                    recoilMult = 1.75f; // Recuo potente de revólver Magnum
-                    adsPos = new Vector3(0f, -0.052f, 0.30f);
-                    slideObj = BuildDetailedRevolverMesh(gunRoot.transform, muzzleObj.transform, matMetal, matSlide, matFiber, matBrass);
+                    prefabPath = "Assets/3D Models/Props/Weapons/DWm715 FPS Model/Prefabs/DW_Set0.prefab";
                     break;
-
                 case SelectedWeaponType.SMG_Tactical:
-                    capacity = 30;
-                    velocity = 410f;
-                    isAuto = true; // Automática contínua
-                    recoilMult = 0.85f;
-                    adsPos = new Vector3(0f, -0.065f, 0.32f);
-                    slideObj = BuildDetailedSMGMesh(gunRoot.transform, muzzleObj.transform, matMetal, matSlide, matFiber);
+                    prefabPath = "Assets/Low Poly SMG Weapon Pack 2/Prefabs/Weapons/SMG_F.prefab";
                     break;
+            }
+
+            if (!string.IsNullOrEmpty(prefabPath))
+            {
+                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+                if (prefab != null)
+                {
+                    modelInstance = Object.Instantiate(prefab, gunRoot.transform);
+                    modelInstance.name = "Real_3D_Model";
+                    // Remove eventuais colliders para não colidir com o jogador
+                    foreach (Collider col in modelInstance.GetComponentsInChildren<Collider>())
+                    {
+                        Object.DestroyImmediate(col);
+                    }
+                }
+            }
+#endif
+
+            if (modelInstance != null)
+            {
+                switch (weaponType)
+                {
+                    case SelectedWeaponType.Pistol_9mm:
+                        capacity = 17;
+                        velocity = 380f;
+                        isAuto = false;
+                        recoilMult = 1.0f;
+                        modelInstance.transform.localPosition = new Vector3(0f, -0.045f, 0.16f);
+                        modelInstance.transform.localRotation = Quaternion.identity;
+                        modelInstance.transform.localScale = Vector3.one;
+                        muzzleObj.transform.localPosition = new Vector3(0f, 0.015f, 0.35f);
+                        adsPos = new Vector3(0f, -0.038f, 0.28f);
+                        hipPos = new Vector3(0.18f, -0.19f, 0.38f);
+                        slideObj = modelInstance.transform.Find("Pistol_A_Bolt");
+                        break;
+
+                    case SelectedWeaponType.Revolver_DanWesson:
+                        capacity = 6;
+                        velocity = 450f;
+                        isAuto = false;
+                        recoilMult = 1.8f;
+                        modelInstance.transform.localPosition = new Vector3(0f, -0.06f, 0.18f);
+                        modelInstance.transform.localRotation = Quaternion.identity;
+                        modelInstance.transform.localScale = Vector3.one * 0.9f;
+                        muzzleObj.transform.localPosition = new Vector3(0f, 0.025f, 0.42f);
+                        adsPos = new Vector3(0f, -0.046f, 0.30f);
+                        hipPos = new Vector3(0.18f, -0.20f, 0.40f);
+                        slideObj = modelInstance.transform.Find("DW_Hummer");
+                        break;
+
+                    case SelectedWeaponType.SMG_Tactical:
+                        capacity = 30;
+                        velocity = 410f;
+                        isAuto = true;
+                        recoilMult = 0.85f;
+                        modelInstance.transform.localPosition = new Vector3(0f, -0.07f, 0.18f);
+                        modelInstance.transform.localRotation = Quaternion.identity;
+                        modelInstance.transform.localScale = Vector3.one * 0.95f;
+                        muzzleObj.transform.localPosition = new Vector3(0f, 0.01f, 0.50f);
+                        adsPos = new Vector3(0f, -0.052f, 0.28f);
+                        hipPos = new Vector3(0.18f, -0.22f, 0.42f);
+                        slideObj = modelInstance.transform.Find("SMG_F_Bolt");
+                        break;
+                }
+            }
+            else
+            {
+                // Fallback procedural
+                switch (weaponType)
+                {
+                    case SelectedWeaponType.Pistol_9mm:
+                        capacity = 17;
+                        velocity = 380f;
+                        isAuto = false;
+                        recoilMult = 1.0f;
+                        adsPos = new Vector3(0f, -0.0465f, 0.32f);
+                        slideObj = BuildDetailedPistolMesh(gunRoot.transform, muzzleObj.transform, matMetal, matSlide, matFiber, matBrass);
+                        break;
+
+                    case SelectedWeaponType.Revolver_DanWesson:
+                        capacity = 6;
+                        velocity = 450f;
+                        isAuto = false;
+                        recoilMult = 1.75f;
+                        adsPos = new Vector3(0f, -0.052f, 0.30f);
+                        slideObj = BuildDetailedRevolverMesh(gunRoot.transform, muzzleObj.transform, matMetal, matSlide, matFiber, matBrass);
+                        break;
+
+                    case SelectedWeaponType.SMG_Tactical:
+                        capacity = 30;
+                        velocity = 410f;
+                        isAuto = true;
+                        recoilMult = 0.85f;
+                        adsPos = new Vector3(0f, -0.065f, 0.32f);
+                        slideObj = BuildDetailedSMGMesh(gunRoot.transform, muzzleObj.transform, matMetal, matSlide, matFiber);
+                        break;
+                }
             }
 
             Weapon weapon = gunRoot.AddComponent<Weapon>();
@@ -541,7 +628,7 @@ namespace IPSCSimulator.Setup
 
             SetFieldValue(handling, "weapon", weapon);
             SetFieldValue(handling, "weaponTransform", holder.transform);
-            SetFieldValue(handling, "hipPosition", new Vector3(0.18f, -0.22f, 0.42f));
+            SetFieldValue(handling, "hipPosition", hipPos);
         }
 
         private static Transform BuildDetailedPistolMesh(Transform parent, Transform muzzle, Material matMetal, Material matSlide, Material matFiber, Material matBrass)
