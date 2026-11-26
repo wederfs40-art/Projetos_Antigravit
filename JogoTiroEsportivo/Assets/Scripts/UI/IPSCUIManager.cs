@@ -243,15 +243,19 @@ namespace IPSCSimulator.UI
 
             float screenW = Screen.width;
             float screenH = Screen.height;
+            bool hasCanvasHUD = (GameplayHUD.Instance != null);
 
-            // 1. Painel Superior Central: Shot Timer
+            // 1. Painel Superior Central: Shot Timer (apenas se o Canvas HUD não estiver ativo)
             float timerPanelW = 340f;
             float timerPanelH = 80f;
             Rect timerRect = new Rect((screenW - timerPanelW) * 0.5f, 20f, timerPanelW, timerPanelH);
-            GUI.Box(timerRect, GUIContent.none, _resultBoxStyle);
 
-            GUI.Label(new Rect(timerRect.x, timerRect.y + 6f, timerPanelW, 22f), _timerStatus, _statusStyle);
-            GUI.Label(new Rect(timerRect.x, timerRect.y + 28f, timerPanelW, 44f), _currentTimeStr, _timerStyle);
+            if (!hasCanvasHUD)
+            {
+                GUI.Box(timerRect, GUIContent.none, _resultBoxStyle);
+                GUI.Label(new Rect(timerRect.x, timerRect.y + 6f, timerPanelW, 22f), _timerStatus, _statusStyle);
+                GUI.Label(new Rect(timerRect.x, timerRect.y + 28f, timerPanelW, 44f), _currentTimeStr, _timerStyle);
+            }
 
             // 1.1 Feedback Visual de Impacto no Alvo
             if (!string.IsNullOrEmpty(_hitFeedbackStr))
@@ -262,15 +266,18 @@ namespace IPSCSimulator.UI
                 GUI.Label(hitRect, _hitFeedbackStr, _hitFeedbackStyle);
             }
 
-            // 2. Split do último tiro (ao lado do cronômetro)
-            GUI.Label(new Rect(timerRect.x + timerPanelW + 15f, 40f, 220f, 32f), _lastSplitStr, _splitStyle);
+            if (!hasCanvasHUD)
+            {
+                // 2. Split do último tiro (ao lado do cronômetro)
+                GUI.Label(new Rect(timerRect.x + timerPanelW + 15f, 40f, 220f, 32f), _lastSplitStr, _splitStyle);
 
-            // 3. Munição no Carregador (canto inferior direito)
-            float ammoW = 150f;
-            float ammoH = 60f;
-            Rect ammoRect = new Rect(screenW - ammoW - 25f, screenH - ammoH - 25f, ammoW, ammoH);
-            GUI.Box(ammoRect, GUIContent.none, _resultBoxStyle);
-            GUI.Label(ammoRect, _ammoStr, _ammoStyle);
+                // 3. Munição no Carregador (canto inferior direito)
+                float ammoW = 150f;
+                float ammoH = 60f;
+                Rect ammoRect = new Rect(screenW - ammoW - 25f, screenH - ammoH - 25f, ammoW, ammoH);
+                GUI.Box(ammoRect, GUIContent.none, _resultBoxStyle);
+                GUI.Label(ammoRect, _ammoStr, _ammoStyle);
+            }
 
             // 4. Guia de Controles (canto inferior esquerdo)
             float helpW = 420f;

@@ -104,6 +104,9 @@ namespace IPSCSimulator.Setup
             GameObject hudObj = new GameObject("IPSC_HUD_Manager");
             hudObj.transform.SetParent(root.transform);
             hudObj.AddComponent<IPSCUIManager>();
+
+            // Instancia o HUD minimalista e translúcido estilo CS2 com Canvas e TextMeshPro
+            GameplayHUD.CreateProceduralHUD(root.transform);
         }
 
         private static void EnsureManagers(GameObject root)
@@ -1229,6 +1232,7 @@ namespace IPSCSimulator.Setup
             GameObject bulletObj = bulletTrans != null ? bulletTrans.gameObject : CreateBulletPrefab(decalObj);
 
             AttachSelectedWeapon(holder, handling, bulletObj, decalObj, newWeapon);
+            GameplayHUD.Instance?.UpdateWeaponName(newWeapon.ToString().Replace("_", " "));
             Debug.Log($"[Arsenal] Arma equipada alterada para: {newWeapon}");
         }
 
