@@ -864,15 +864,23 @@ namespace IPSCSimulator.Setup
 #if UNITY_EDITOR
                 if (weaponType == SelectedWeaponType.SMG_Tactical)
                 {
+                    // Oculta a bala de exibição 7.62x39mm que vem dentro do FBX e ficava flutuando sobre a arma
+                    foreach (Transform child in modelInstance.GetComponentsInChildren<Transform>(true))
+                    {
+                        if (child != null && (child.name.IndexOf("cal", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                              child.name.IndexOf("7_62", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                              child.name.IndexOf("bullet", System.StringComparison.OrdinalIgnoreCase) >= 0))
+                        {
+                            child.gameObject.SetActive(false);
+                        }
+                    }
+
                     Material akmMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Weapons_ChamferZone/AKM/Materials/WPNM_AKM.mat");
-                    Material calMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Weapons_ChamferZone/AKM/Materials/WPNM_calibers.mat");
                     if (akmMat != null)
                     {
                         foreach (MeshRenderer mr in modelInstance.GetComponentsInChildren<MeshRenderer>())
                         {
-                            if (mr.name.IndexOf("cal", System.StringComparison.OrdinalIgnoreCase) >= 0 || mr.name.IndexOf("7_62", System.StringComparison.OrdinalIgnoreCase) >= 0)
-                                mr.sharedMaterial = calMat != null ? calMat : akmMat;
-                            else
+                            if (mr.gameObject.activeInHierarchy)
                                 mr.sharedMaterial = akmMat;
                         }
                     }
