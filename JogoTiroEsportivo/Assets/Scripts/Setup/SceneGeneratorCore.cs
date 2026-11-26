@@ -457,6 +457,7 @@ namespace IPSCSimulator.Setup
             SetupBodycamWarehouseLighting();
 
             Material matPlywood = PBRMaterialFactory.CreatePlywoodShootHousePBRMaterial();
+            Material matFloor = PBRMaterialFactory.CreateWarehouseConcretePBRMaterial();
             Material matStud = ProceduralMaterials.CreateMaterial(new Color(0.68f, 0.48f, 0.28f), "Mat_PineStud_2x4", 0.15f, 0.0f);
             Material matTruss = ProceduralMaterials.CreateTrussSteelMaterial();
             Material matRoof = ProceduralMaterials.CreateMaterial(new Color(0.20f, 0.22f, 0.24f), "Mat_WarehouseRoof", 0.2f, 0.5f);
@@ -465,8 +466,8 @@ namespace IPSCSimulator.Setup
             GameObject env = new GameObject("Environment_Bodycam_ShootHouse");
             env.transform.SetParent(root);
 
-            // 1. Piso de compensado/OSB com marcas de treino
-            CreateFloor(env.transform, new Vector3(0, -0.1f, 15f), new Vector3(22f, 0.2f, 32f), matPlywood);
+            // 1. Piso de concreto industrial polido
+            CreateFloor(env.transform, new Vector3(0, -0.1f, 15f), new Vector3(22f, 0.2f, 32f), matFloor);
 
             // 2. Galpão industrial externo (Teto alto com clarabóias)
             CreateWall(env.transform, new Vector3(-10.5f, 3.2f, 15f), new Vector3(0.5f, 6.5f, 32f), matRoof);
@@ -650,15 +651,27 @@ namespace IPSCSimulator.Setup
                 sun.type = LightType.Directional;
             }
 
-            sun.color = new Color(1f, 0.94f, 0.82f);
-            sun.intensity = 1.35f;
-            sun.transform.rotation = Quaternion.Euler(58f, -42f, 0f);
+            sun.color = new Color(1f, 0.96f, 0.88f);
+            sun.intensity = 1.30f;
+            sun.transform.rotation = Quaternion.Euler(52f, -38f, 0f);
             sun.shadows = LightShadows.Soft;
+            sun.shadowStrength = 0.85f;
+            sun.shadowBias = 0.03f;
+            sun.shadowNormalBias = 0.25f;
 
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.42f, 0.45f, 0.50f);
-            RenderSettings.ambientEquatorColor = new Color(0.28f, 0.28f, 0.30f);
-            RenderSettings.ambientGroundColor = new Color(0.14f, 0.12f, 0.10f);
+            RenderSettings.ambientSkyColor = new Color(0.55f, 0.60f, 0.68f);
+            RenderSettings.ambientEquatorColor = new Color(0.48f, 0.46f, 0.44f);
+            RenderSettings.ambientGroundColor = new Color(0.32f, 0.30f, 0.28f);
+
+#if UNITY_EDITOR
+            Material skyMat = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(
+                "Assets/Starter Assets/Sample/Environment/Art/Skybox/SkyboxLiteWarm.mat");
+            if (skyMat != null)
+            {
+                RenderSettings.skybox = skyMat;
+            }
+#endif
 
             GameObject probeObj = GameObject.Find("Bodycam_Reflection_Probe");
             if (probeObj == null)
@@ -698,6 +711,7 @@ namespace IPSCSimulator.Setup
             camObj.AddComponent<AudioListener>();
             cam.fieldOfView = 78f; // Visão grande angular tática de Bodycam
             cam.nearClipPlane = 0.02f;
+            cam.clearFlags = CameraClearFlags.Skybox;
 
             // Desativa câmeras antigas
             foreach (Camera c in Object.FindObjectsByType<Camera>(FindObjectsSortMode.None))
@@ -946,13 +960,10 @@ namespace IPSCSimulator.Setup
             if (cycles == null) cycles = holder.AddComponent<TacticalWeaponCycles>();
             cycles.BindTransforms(weapon, slideObj, magObj, motion);
 
-            // Braços e Luvas Táticas Militares em 1ª Pessoa com Postura Dinâmica de Empunhadura
+            // Configura postura tática refinada de viewmodel
             TacticalViewmodelArms arms = holder.GetComponent<TacticalViewmodelArms>();
             if (arms == null) arms = holder.AddComponent<TacticalViewmodelArms>();
-            arms.InitializeArms(holder.transform,
-                PBRMaterialFactory.CreateTacticalCamoPBRMaterial(),
-                PBRMaterialFactory.CreateCombatGlovePBRMaterial(),
-                PBRMaterialFactory.CreateGunSteelPBRMaterial(new Color(0.12f, 0.12f, 0.14f)));
+            arms.InitializeArms(holder.transform);
             arms.SetWeaponIKStance(weaponType);
         }
 
@@ -983,128 +994,7 @@ namespace IPSCSimulator.Setup
             Debug.Log($"[Arsenal] Arma equipada alterada para: {newWeapon}");
         }
 
-        /// <summary>
-        /// Constrói braços e luvas táticas militares em 1ª pessoa (FPS Viewmodel Hands),
-        /// eliminando a sensação de 'arma flutuando no ar' e conferindo realismo de postura tática.
-        /// </summary>
-        private static void AttachTacticalHands(GameObject holder, SelectedWeaponType weaponType)
-        {
-            GameObject handsRoot = new GameObject("FPS_Tactical_Hands");
-            handsRoot.transform.SetParent(holder.transform);
-            handsRoot.transform.localPosition = Vector3.zero;
-            handsRoot.transform.localRotation = Quaternion.identity;
 
-            Material matSleeve = ProceduralMaterials.CreateMaterial(new Color(0.18f, 0.20f, 0.19f), "Mat_TacticalSleeve", 0.15f, 0.20f);
-            Material matGlove = ProceduralMaterials.CreateMaterial(new Color(0.12f, 0.12f, 0.13f), "Mat_CombatGlove", 0.35f, 0.50f);
-            Material matArmorKnuckle = ProceduralMaterials.CreateMaterial(new Color(0.08f, 0.08f, 0.09f), "Mat_KnuckleArmor", 0.70f, 0.85f);
-
-            // ==========================================
-            // BRAÇO E MÃO DIREITA (EMPURRA E DISPARA)
-            // ==========================================
-            GameObject rightArm = new GameObject("Right_Arm");
-            rightArm.transform.SetParent(handsRoot.transform);
-
-            // Antebraço com manga tática militar
-            GameObject rightForearm = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            rightForearm.name = "Right_Forearm_Sleeve";
-            rightForearm.transform.SetParent(rightArm.transform);
-            rightForearm.transform.localPosition = new Vector3(0.09f, -0.25f, -0.04f);
-            rightForearm.transform.localScale = new Vector3(0.075f, 0.20f, 0.075f);
-            rightForearm.transform.localRotation = Quaternion.Euler(42f, -14f, 15f);
-            rightForearm.GetComponent<MeshRenderer>().material = matSleeve;
-            SafeDestroy(rightForearm.GetComponent<Collider>());
-
-            // Luva tática / Palma da mão direita envolvendo o cabo
-            GameObject rightGloveBase = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            rightGloveBase.name = "Right_Glove_Palm";
-            rightGloveBase.transform.SetParent(rightArm.transform);
-            rightGloveBase.transform.localPosition = new Vector3(0.015f, -0.065f, 0.12f);
-            rightGloveBase.transform.localScale = new Vector3(0.048f, 0.085f, 0.055f);
-            rightGloveBase.transform.localRotation = Quaternion.Euler(15f, 0f, 0f);
-            rightGloveBase.GetComponent<MeshRenderer>().material = matGlove;
-            SafeDestroy(rightGloveBase.GetComponent<Collider>());
-
-            // Placa de proteção nos nós dos dedos (Knuckle Guard)
-            GameObject rightKnuckle = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            rightKnuckle.name = "Right_Knuckle_Armor";
-            rightKnuckle.transform.SetParent(rightGloveBase.transform);
-            rightKnuckle.transform.localPosition = new Vector3(0.52f, 0.12f, 0f);
-            rightKnuckle.transform.localScale = new Vector3(0.20f, 0.75f, 0.85f);
-            rightKnuckle.GetComponent<MeshRenderer>().material = matArmorKnuckle;
-            SafeDestroy(rightKnuckle.GetComponent<Collider>());
-
-            // Dedos envolvendo a empunhadura da arma
-            for (int f = 0; f < 3; f++)
-            {
-                GameObject finger = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                finger.name = $"Right_Finger_{f}";
-                finger.transform.SetParent(rightGloveBase.transform);
-                finger.transform.localPosition = new Vector3(-0.35f, -0.28f + (f * 0.26f), 0.52f);
-                finger.transform.localScale = new Vector3(0.55f, 0.20f, 0.22f);
-                finger.transform.localRotation = Quaternion.Euler(0, -25f, 0);
-                finger.GetComponent<MeshRenderer>().material = matGlove;
-                SafeDestroy(finger.GetComponent<Collider>());
-            }
-
-            // Dedo indicador tático no gatilho
-            GameObject triggerFinger = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            triggerFinger.name = "Right_Trigger_Finger";
-            triggerFinger.transform.SetParent(rightGloveBase.transform);
-            triggerFinger.transform.localPosition = new Vector3(-0.15f, 0.42f, 0.65f);
-            triggerFinger.transform.localScale = new Vector3(0.22f, 0.18f, 0.55f);
-            triggerFinger.transform.localRotation = Quaternion.Euler(12f, -10f, 0);
-            triggerFinger.GetComponent<MeshRenderer>().material = matGlove;
-            SafeDestroy(triggerFinger.GetComponent<Collider>());
-
-            // Polegar
-            GameObject thumb = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            thumb.name = "Right_Thumb";
-            thumb.transform.SetParent(rightGloveBase.transform);
-            thumb.transform.localPosition = new Vector3(0.35f, 0.28f, 0.35f);
-            thumb.transform.localScale = new Vector3(0.26f, 0.22f, 0.45f);
-            thumb.transform.localRotation = Quaternion.Euler(-18f, 15f, 0);
-            thumb.GetComponent<MeshRenderer>().material = matGlove;
-            SafeDestroy(thumb.GetComponent<Collider>());
-
-            // ==========================================
-            // BRAÇO E MÃO ESQUERDA (APOIO TÁTICO IPSC)
-            // ==========================================
-            GameObject leftArm = new GameObject("Left_Arm");
-            leftArm.transform.SetParent(handsRoot.transform);
-
-            // Antebraço esquerdo
-            GameObject leftForearm = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            leftForearm.name = "Left_Forearm_Sleeve";
-            leftForearm.transform.SetParent(leftArm.transform);
-            leftForearm.transform.localPosition = new Vector3(-0.14f, -0.26f, -0.01f);
-            leftForearm.transform.localScale = new Vector3(0.075f, 0.22f, 0.075f);
-            leftForearm.transform.localRotation = Quaternion.Euler(46f, 22f, -18f);
-            leftForearm.GetComponent<MeshRenderer>().material = matSleeve;
-            SafeDestroy(leftForearm.GetComponent<Collider>());
-
-            // Mão esquerda apoiando por baixo da mão direita (Two-handed grip IPSC)
-            GameObject leftGloveBase = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            leftGloveBase.name = "Left_Glove_Palm";
-            leftGloveBase.transform.SetParent(leftArm.transform);
-            leftGloveBase.transform.localPosition = new Vector3(-0.02f, -0.09f, 0.10f);
-            leftGloveBase.transform.localScale = new Vector3(0.052f, 0.082f, 0.065f);
-            leftGloveBase.transform.localRotation = Quaternion.Euler(22f, 18f, -10f);
-            leftGloveBase.GetComponent<MeshRenderer>().material = matGlove;
-            SafeDestroy(leftGloveBase.GetComponent<Collider>());
-
-            // Dedos da mão esquerda envolvendo a frente da empunhadura
-            for (int f = 0; f < 3; f++)
-            {
-                GameObject fingerL = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                fingerL.name = $"Left_Finger_{f}";
-                fingerL.transform.SetParent(leftGloveBase.transform);
-                fingerL.transform.localPosition = new Vector3(0.35f, -0.24f + (f * 0.25f), 0.45f);
-                fingerL.transform.localScale = new Vector3(0.48f, 0.20f, 0.22f);
-                fingerL.transform.localRotation = Quaternion.Euler(0, 30f, 0);
-                fingerL.GetComponent<MeshRenderer>().material = matGlove;
-                SafeDestroy(fingerL.GetComponent<Collider>());
-            }
-        }
 
         private static Transform BuildDetailedPistolMesh(Transform parent, Transform muzzle, Material matMetal, Material matSlide, Material matFiber, Material matBrass)
         {
