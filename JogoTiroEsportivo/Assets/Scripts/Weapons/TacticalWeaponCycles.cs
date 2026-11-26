@@ -24,8 +24,8 @@ namespace IPSCSimulator.Weapons
         [SerializeField] private float boltTravelDistance = 0.045f;
         [SerializeField] private float boltReturnSpeed = 38.0f;
 
-        [Header("Inspeção da Arma (Weapon Inspect)")]
-        [SerializeField] private KeyCode inspectKey = KeyCode.I;
+        [Header("Inspeção da Arma (Weapon Inspect - Tecla F clássica do Counter-Strike)")]
+        [SerializeField] private KeyCode inspectKey = KeyCode.F;
 
         private Vector3 _slideOriginalLocalPos;
         private Vector3 _magOriginalLocalPos;
@@ -60,8 +60,8 @@ namespace IPSCSimulator.Weapons
 
         private void Update()
         {
-            // Atalho para inspecionar a arma (Tecla I)
-            if (Input.GetKeyDown(inspectKey) && !_isInspecting && !_isReloading && (motion == null || !motion.IsAiming))
+            // Atalho para inspecionar a arma (Tecla F clássica do CS ou Tecla I)
+            if ((Input.GetKeyDown(inspectKey) || Input.GetKeyDown(KeyCode.I)) && !_isInspecting && !_isReloading && (motion == null || !motion.IsAiming))
             {
                 StartCoroutine(WeaponInspectCoroutine());
             }

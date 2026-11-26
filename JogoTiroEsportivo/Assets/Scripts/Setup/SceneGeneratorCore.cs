@@ -1184,23 +1184,45 @@ namespace IPSCSimulator.Setup
         private static void SetupTacticalCSLighting()
         {
             Light sun = Object.FindAnyObjectByType<Light>();
-            if (sun != null)
+            if (sun == null)
             {
-                sun.color = new Color(0.95f, 0.90f, 0.80f);
-                sun.intensity = 0.85f;
-                sun.transform.rotation = Quaternion.Euler(55f, 45f, 0);
-                sun.shadows = LightShadows.Soft;
+                GameObject sunObj = new GameObject("CS_Sun_Light");
+                sun = sunObj.AddComponent<Light>();
+                sun.type = LightType.Directional;
             }
 
+            sun.color = new Color(1.0f, 0.95f, 0.85f);
+            sun.intensity = 1.25f;
+            sun.transform.rotation = Quaternion.Euler(50f, 40f, 0);
+            sun.shadows = LightShadows.Soft;
+            sun.shadowStrength = 0.85f;
+
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.45f, 0.48f, 0.55f);
-            RenderSettings.ambientEquatorColor = new Color(0.35f, 0.35f, 0.35f);
-            RenderSettings.ambientGroundColor = new Color(0.20f, 0.20f, 0.20f);
+            RenderSettings.ambientSkyColor = new Color(0.55f, 0.60f, 0.68f);
+            RenderSettings.ambientEquatorColor = new Color(0.45f, 0.45f, 0.45f);
+            RenderSettings.ambientGroundColor = new Color(0.28f, 0.28f, 0.28f);
+
+#if UNITY_EDITOR
+            Material skyMat = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(
+                "Assets/Starter Assets/Sample/Environment/Art/Skybox/SkyboxLiteWarm.mat");
+            if (skyMat != null) RenderSettings.skybox = skyMat;
+#endif
+
+            GameObject probeObj = GameObject.Find("CS_Reflection_Probe");
+            if (probeObj == null)
+            {
+                probeObj = new GameObject("CS_Reflection_Probe");
+                ReflectionProbe probe = probeObj.AddComponent<ReflectionProbe>();
+                probe.mode = UnityEngine.Rendering.ReflectionProbeMode.Realtime;
+                probe.refreshMode = UnityEngine.Rendering.ReflectionProbeRefreshMode.OnAwake;
+                probe.size = new Vector3(50f, 20f, 60f);
+                probeObj.transform.position = new Vector3(0, 2.5f, 16f);
+            }
 
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Exponential;
-            RenderSettings.fogDensity = 0.009f;
-            RenderSettings.fogColor = new Color(0.40f, 0.42f, 0.45f);
+            RenderSettings.fogDensity = 0.003f;
+            RenderSettings.fogColor = new Color(0.70f, 0.72f, 0.75f);
         }
 
         private static Material CreateGravelMaterial()
