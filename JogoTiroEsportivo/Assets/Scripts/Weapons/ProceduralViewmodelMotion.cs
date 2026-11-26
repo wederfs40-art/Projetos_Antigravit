@@ -37,11 +37,17 @@ namespace IPSCSimulator.Weapons
         [SerializeField] private float recoilReturnSpeed = 9.0f;
 
         [Header("Posicionamento Base")]
-        [SerializeField] private Vector3 hipPosition = new Vector3(0.085f, -0.125f, 0.30f);
-        [SerializeField] private Vector3 adsPosition = new Vector3(0f, -0.076f, 0.24f);
+        [SerializeField] private Vector3 hipPosition = new Vector3(0.085f, -0.125f, 0.28f);
+        [SerializeField] private Vector3 adsPosition = new Vector3(0f, -0.046f, 0.16f);
         [SerializeField] private Vector3 sprintPosition = new Vector3(0.10f, -0.11f, 0.25f);
         [SerializeField] private Vector3 sprintRotation = new Vector3(-20f, 25f, -14f); // High ready tático
 
+        [Header("Camera FOV Zoom (Foco Visual)")]
+        [SerializeField] private float hipFOV = 70f;
+        [SerializeField] private float adsFOV = 48f;
+        [SerializeField] private float fovZoomSpeed = 14f;
+
+        private Camera _playerCamera;
         private Vector3 _currentRecoilPos;
         private Vector3 _targetRecoilPos;
         private Vector3 _currentRecoilRot;
@@ -65,6 +71,9 @@ namespace IPSCSimulator.Weapons
         private void Start()
         {
             _characterController = GetComponentInParent<CharacterController>();
+            _playerCamera = GetComponentInParent<Camera>();
+            if (_playerCamera == null) _playerCamera = Camera.main;
+            if (_playerCamera != null) hipFOV = _playerCamera.fieldOfView;
             Weapon.OnWeaponFired += ApplyFireRecoil;
         }
 
@@ -76,10 +85,20 @@ namespace IPSCSimulator.Weapons
         private void Update()
         {
             HandleInputs();
+            HandleFOVZoom();
             CalculateSway();
             CalculateBobbing();
             CalculateRecoil();
             ApplyCompositeTransform();
+        }
+
+        private void HandleFOVZoom()
+        {
+            if (_playerCamera != null)
+            {
+                float targetFOV = _isAiming ? adsFOV : hipFOV;
+                _playerCamera.fieldOfView = Mathf.Lerp(_playerCamera.fieldOfView, targetFOV, Time.deltaTime * fovZoomSpeed);
+            }
         }
 
         private void HandleInputs()
@@ -202,11 +221,12 @@ namespace IPSCSimulator.Weapons
                 baseTargetRot = Quaternion.Euler(sprintRotation);
             }
 
-            float transitionSpeed = _isAiming ? 14f : 8f;
+            float transitionSpeed = _isAiming ? 16f : 8f;
+            float aimDamping = _isAiming ? 0.08f : 1.0f;
 
-            // Posição final composta
-            Vector3 targetPosition = baseTargetPos + _swayPosition + _currentRecoilPos;
-            Quaternion targetRotation = baseTargetRot * _swayRotation * Quaternion.Euler(_freeAimOffset.y, _freeAimOffset.x, 0f) * Quaternion.Euler(_currentRecoilRot);
+            // Posição final composta: ao mirar, amortece drasticamente o sway e o free aim para travar as miras no centro dos olhos
+            Vector3 targetPosition = baseTargetPos + (_swayPosition * aimDamping) + _currentRecoilPos;
+            Quaternion targetRotation = baseTargetRot * Quaternion.Slerp(Quaternion.identity, _swayRotation, aimDamping) * Quaternion.Euler(_freeAimOffset.y * aimDamping, _freeAimOffset.x * aimDamping, 0f) * Quaternion.Euler(_currentRecoilRot);
 
             transform.localPosition = Vector3.Lerp(transform.localPosition, targetPosition, Time.deltaTime * transitionSpeed);
             transform.localRotation = Quaternion.Slerp(transform.localRotation, targetRotation, Time.deltaTime * transitionSpeed);

@@ -24,7 +24,7 @@ namespace IPSCSimulator.UI
         private GUIStyle _btnStartStyle;
         private GUIStyle _infoBoxStyle;
 
-        private GameEnvironmentType _tempEnv = GameEnvironmentType.IPSC_Outdoor_Short;
+        private GameEnvironmentType _tempEnv = GameEnvironmentType.Outdoor_Precision_Stand;
         private SelectedWeaponType _tempWeapon = SelectedWeaponType.Pistol_9mm;
 
         private void Start()
@@ -77,6 +77,7 @@ namespace IPSCSimulator.UI
             GUILayout.Label("1. SELECIONE O CENÁRIO / AMBIENTE:", _sectionHeaderStyle);
             GUILayout.Space(5);
 
+            DrawEnvironmentButton(GameEnvironmentType.Outdoor_Precision_Stand, "⭐ Stand Aberto com Foco Visual (Ilustração)", "Estande aberto com cascalho claro, barranco de terra, vegetação e alvo silhueta focado na alça/massa de mira.");
             DrawEnvironmentButton(GameEnvironmentType.IPSC_Outdoor_Short, "🏆 Pista Curta IPSC (Speed Option)", "3 alvos de papelão + 2 poppers metálicos rápidos a 7m e 9m.");
             DrawEnvironmentButton(GameEnvironmentType.IPSC_Outdoor_Medium, "🏆 Pista Média IPSC (Labirinto Tático)", "Corredores com biombos de madeira, alvos No-Shoot e barris táticos.");
             DrawEnvironmentButton(GameEnvironmentType.IPSC_Outdoor_Long, "🏆 Pista Longa IPSC (Torneio Oficial 30m)", "Pista completa com 8 alvos de papelão, 4 poppers de aço e 3 boxes de tiro.");

@@ -262,8 +262,9 @@ namespace IPSCSimulator.Utilities
 
         /// <summary>
         /// Gera a textura de papelão clássico IPSC com zonas Alpha, Charlie e Delta demarcadas.
+        /// Suporta opcionalmente o miolo central de foco visual (diamante vermelho/laranja) conforme a ilustração de instrução de tiro.
         /// </summary>
-        public static Texture2D CreateIPSCTargetTexture(bool isNoShoot = false)
+        public static Texture2D CreateIPSCTargetTexture(bool isNoShoot = false, bool withVisualFocusCenter = false)
         {
             int width = 256;
             int height = 512;
@@ -293,6 +294,25 @@ namespace IPSCSimulator.Utilities
 
                     if ((Mathf.Abs(nx - 0.20f) < 0.012f || Mathf.Abs(nx - 0.80f) < 0.012f) && (ny >= 0.12f && ny <= 0.85f)) pixel = lineScoreColor;
                     if ((Mathf.Abs(ny - 0.12f) < 0.006f || Mathf.Abs(ny - 0.85f) < 0.006f) && (nx >= 0.20f && nx <= 0.80f)) pixel = lineScoreColor;
+
+                    // Miolo de foco visual vermelho/laranja (idêntico à ilustração "Seu Foco Visual")
+                    if (withVisualFocusCenter && !isNoShoot)
+                    {
+                        float cdx = (nx - 0.50f) / 0.075f;
+                        float cdy = (ny - 0.52f) / 0.110f;
+                        float distSq = cdx * cdx + cdy * cdy;
+                        if (distSq < 1.0f)
+                        {
+                            // Gradiente do centro brilhante âmbar para o anel vermelho tático
+                            float t = Mathf.Sqrt(distSq);
+                            Color focalCenter = Color.Lerp(new Color(1.0f, 0.65f, 0.15f), new Color(0.85f, 0.18f, 0.10f), t);
+                            pixel = focalCenter;
+                        }
+                        else if (distSq < 1.35f)
+                        {
+                            pixel = new Color(0.38f, 0.18f, 0.08f); // Contorno escuro da mira
+                        }
+                    }
 
                     // Letras de identificação no centro da zona Alpha
                     if (isNoShoot)

@@ -297,5 +297,98 @@ namespace IPSCSimulator.Utilities
 
             return mat;
         }
+
+        /// <summary>
+        /// Material PBR do Barranco/Berma de Contenção de Terra e Areia Compactada do Estande Aberto (Conforme Ilustração).
+        /// </summary>
+        public static Material CreateOutdoorBermEarthPBRMaterial()
+        {
+            Material mat = new Material(GetStandardShader());
+            mat.name = "PBR_Outdoor_Berm_Earth";
+
+            int size = 512;
+            Texture2D albedo = new Texture2D(size, size, TextureFormat.RGB24, true);
+            Texture2D height = new Texture2D(size, size, TextureFormat.RGB24, false);
+
+            Color earthDark = new Color(0.38f, 0.28f, 0.18f);
+            Color earthMid = new Color(0.48f, 0.38f, 0.26f);
+            Color earthLight = new Color(0.58f, 0.48f, 0.34f);
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float u = (float)x / size;
+                    float v = (float)y / size;
+                    float macro = Mathf.PerlinNoise(u * 5f, v * 5f) * 0.5f;
+                    float strata = Mathf.PerlinNoise(u * 15f, v * 2f) * 0.25f; // Camadas horizontais de terra
+                    float grain = Mathf.PerlinNoise(u * 40f, v * 40f) * 0.25f;
+                    float total = Mathf.Clamp01(macro + strata + grain);
+
+                    Color c = Color.Lerp(earthDark, total > 0.5f ? earthLight : earthMid, total);
+                    albedo.SetPixel(x, y, c);
+                    height.SetPixel(x, y, new Color(total, total, total));
+                }
+            }
+            albedo.Apply();
+            height.Apply();
+
+            Texture2D normalMap = GenerateNormalMapFromHeight(height, 2.5f);
+
+            mat.mainTexture = albedo;
+            mat.EnableKeyword("_NORMALMAP");
+            mat.SetTexture("_BumpMap", normalMap);
+            mat.SetFloat("_BumpScale", 1.3f);
+            mat.SetFloat("_Metallic", 0.0f);
+            mat.SetFloat("_Glossiness", 0.08f);
+
+            return mat;
+        }
+
+        /// <summary>
+        /// Material PBR de Vegetação, Arbustos e Árvores ao Fundo da Berma (Conforme Ilustração).
+        /// </summary>
+        public static Material CreateFoliageGreenPBRMaterial()
+        {
+            Material mat = new Material(GetStandardShader());
+            mat.name = "PBR_Foliage_Trees";
+
+            int size = 256;
+            Texture2D albedo = new Texture2D(size, size, TextureFormat.RGB24, true);
+            Texture2D height = new Texture2D(size, size, TextureFormat.RGB24, false);
+
+            Color leafDark = new Color(0.12f, 0.24f, 0.08f);
+            Color leafMid = new Color(0.22f, 0.38f, 0.14f);
+            Color leafLight = new Color(0.32f, 0.50f, 0.20f);
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float u = (float)x / size;
+                    float v = (float)y / size;
+                    float noise1 = Mathf.PerlinNoise(u * 20f, v * 20f) * 0.6f;
+                    float noise2 = Mathf.PerlinNoise(u * 50f, v * 50f) * 0.4f;
+                    float total = Mathf.Clamp01(noise1 + noise2);
+
+                    Color c = Color.Lerp(leafDark, total > 0.45f ? leafLight : leafMid, total);
+                    albedo.SetPixel(x, y, c);
+                    height.SetPixel(x, y, new Color(total, total, total));
+                }
+            }
+            albedo.Apply();
+            height.Apply();
+
+            Texture2D normalMap = GenerateNormalMapFromHeight(height, 2.0f);
+
+            mat.mainTexture = albedo;
+            mat.EnableKeyword("_NORMALMAP");
+            mat.SetTexture("_BumpMap", normalMap);
+            mat.SetFloat("_BumpScale", 1.1f);
+            mat.SetFloat("_Metallic", 0.0f);
+            mat.SetFloat("_Glossiness", 0.18f);
+
+            return mat;
+        }
     }
 }

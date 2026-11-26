@@ -15,13 +15,21 @@ namespace IPSCSimulator.Weapons
     [DisallowMultipleComponent]
     public class ProceduralWeaponViewmodel : MonoBehaviour
     {
-        [Header("--- Posicionamento Base ---")]
+        [Header("--- Posicionamento Base (Foco Visual da Alça e Massa de Mira) ---")]
         [Tooltip("Posição de repouso da arma no quadril (Hipfire)")]
-        public Vector3 hipPosition = new Vector3(0.12f, -0.14f, 0.32f);
-        [Tooltip("Posição da arma alinhada ao centro da tela ao mirar (ADS)")]
-        public Vector3 adsPosition = new Vector3(0f, -0.09f, 0.25f);
+        public Vector3 hipPosition = new Vector3(0.085f, -0.125f, 0.28f);
+        [Tooltip("Posição da alça e massa de mira alinhadas nos olhos do atirador (ADS)")]
+        public Vector3 adsPosition = new Vector3(0f, -0.046f, 0.16f);
         [Tooltip("Velocidade de transição para a mira ADS")]
-        public float adsTransitionSpeed = 12f;
+        public float adsTransitionSpeed = 16f;
+
+        [Header("--- Camera FOV Zoom (Foco Visual) ---")]
+        [Tooltip("Campo de visão normal da câmera")]
+        public float hipFOV = 70f;
+        [Tooltip("Campo de visão aproximado ao mirar (zoom de foco)")]
+        public float adsFOV = 48f;
+        [Tooltip("Velocidade do zoom da câmera")]
+        public float fovZoomSpeed = 14f;
 
         [Header("--- Mouse Sway (Inércia da Câmera) ---")]
         [Tooltip("Intensidade do deslocamento posicional ao mover o mouse")]
@@ -88,17 +96,22 @@ namespace IPSCSimulator.Weapons
         private float _bobCycle;
         private bool _isAiming;
         private CharacterController _controller;
+        private Camera _playerCamera;
 
         public bool IsAiming => _isAiming;
 
         private void Awake()
         {
             _controller = GetComponentInParent<CharacterController>();
+            _playerCamera = GetComponentInParent<Camera>();
+            if (_playerCamera == null) _playerCamera = Camera.main;
+            if (_playerCamera != null) hipFOV = _playerCamera.fieldOfView;
         }
 
         private void Update()
         {
             HandleAimInput();
+            HandleFOVZoom();
             HandleSway();
             HandleStrafeTilt();
             HandleBobbing();
@@ -108,6 +121,15 @@ namespace IPSCSimulator.Weapons
             if (testFireWithLeftClick && Input.GetMouseButtonDown(0))
             {
                 FireRecoil();
+            }
+        }
+
+        private void HandleFOVZoom()
+        {
+            if (_playerCamera != null)
+            {
+                float targetFOV = _isAiming ? adsFOV : hipFOV;
+                _playerCamera.fieldOfView = Mathf.Lerp(_playerCamera.fieldOfView, targetFOV, Time.deltaTime * fovZoomSpeed);
             }
         }
 
@@ -218,9 +240,10 @@ namespace IPSCSimulator.Weapons
         private void ApplyCompositeTransform()
         {
             Vector3 basePosition = _isAiming ? adsPosition : hipPosition;
+            float aimDamping = _isAiming ? 0.08f : 1.0f;
 
-            Vector3 finalPosition = basePosition + _swayPos + _currentRecoilPos;
-            Quaternion finalRotation = _swayRot * Quaternion.Euler(_currentRecoilRot) * Quaternion.Euler(0f, 0f, _currentTiltZ);
+            Vector3 finalPosition = basePosition + (_swayPos * aimDamping) + _currentRecoilPos;
+            Quaternion finalRotation = Quaternion.Slerp(Quaternion.identity, _swayRot, aimDamping) * Quaternion.Euler(_currentRecoilRot) * Quaternion.Euler(0f, 0f, _currentTiltZ * aimDamping);
 
             transform.localPosition = Vector3.Lerp(transform.localPosition, finalPosition, Time.deltaTime * adsTransitionSpeed);
             transform.localRotation = Quaternion.Slerp(transform.localRotation, finalRotation, Time.deltaTime * adsTransitionSpeed);

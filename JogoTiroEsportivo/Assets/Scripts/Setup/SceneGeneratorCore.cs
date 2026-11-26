@@ -34,7 +34,7 @@ namespace IPSCSimulator.Setup
 
         public static void GenerateCompleteShootingRange()
         {
-            BuildSelectedEnvironment(GameEnvironmentType.Bodycam_ShootHouse, SelectedWeaponType.SMG_Tactical);
+            BuildSelectedEnvironment(GameEnvironmentType.Outdoor_Precision_Stand, SelectedWeaponType.Pistol_9mm);
         }
 
         public static void BuildSelectedEnvironment(GameEnvironmentType envType, SelectedWeaponType weaponType)
@@ -80,6 +80,9 @@ namespace IPSCSimulator.Setup
                     break;
                 case GameEnvironmentType.Bodycam_ShootHouse:
                     BuildBodycamShootHouse(root.transform, targetsList);
+                    break;
+                case GameEnvironmentType.Outdoor_Precision_Stand:
+                    BuildOutdoorPrecisionStand(root.transform, targetsList);
                     break;
             }
 
@@ -531,6 +534,93 @@ namespace IPSCSimulator.Setup
             CreateSteelPopper(root, "Popper_Aço_Final", new Vector3(0f, 0, 26.5f), matSteel);
         }
 
+        // =========================================================================
+        // CENÁRIO 7: STAND DE TIRO ABERTO COM BERMA E FOCO VISUAL (ILUSTRAÇÃO)
+        // =========================================================================
+        private static void BuildOutdoorPrecisionStand(Transform root, List<IPSCTarget> targets)
+        {
+            SetupSunLighting(true);
+
+            Material matGround = PBRMaterialFactory.CreateRealisticShootRangeGroundPBRMaterial();
+            Material matBerm = PBRMaterialFactory.CreateOutdoorBermEarthPBRMaterial();
+            Material matFoliage = PBRMaterialFactory.CreateFoliageGreenPBRMaterial();
+            Material matWood = PBRMaterialFactory.CreatePlywoodShootHousePBRMaterial();
+            Material matHazard = CreateHazardMaterial();
+            Material matSteel = PBRMaterialFactory.CreateGunSteelPBRMaterial(new Color(0.85f, 0.85f, 0.88f));
+
+            GameObject env = new GameObject("Environment_Outdoor_Precision_Stand");
+            env.transform.SetParent(root);
+
+            // 1. Chão da Linha de Tiro (Cascalho claro e terra batida de clube de tiro)
+            CreateFloor(env.transform, new Vector3(0, -0.25f, 14f), new Vector3(18f, 0.5f, 32f), matGround);
+
+            // 2. Grande Barranco de Contenção Balística (Earth Berm / Backstop) ao Fundo
+            CreateBerm(env.transform, new Vector3(0, 3.2f, 22f), new Vector3(22f, 6.4f, 5.0f), matBerm);
+
+            // Rampa/Talude frontal de terra do barranco
+            GameObject slope = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            slope.name = "Berm_FrontSlope";
+            slope.transform.SetParent(env.transform);
+            slope.transform.position = new Vector3(0f, 1.6f, 19.5f);
+            slope.transform.rotation = Quaternion.Euler(30f, 0f, 0f);
+            slope.transform.localScale = new Vector3(22f, 0.8f, 4.2f);
+            slope.GetComponent<MeshRenderer>().material = matBerm;
+
+            // 3. Copa de Árvores e Vegetação Verde no Topo e Atrás do Barranco (Conforme Ilustração)
+            CreateOutdoorFoliageCrown(env.transform, new Vector3(0, 6.6f, 23.5f), new Vector3(24f, 3.2f, 4.0f), matFoliage);
+
+            // 4. Bermas de Terra Laterais de Segurança da Baía de Tiro
+            CreateBerm(env.transform, new Vector3(-9.5f, 2.0f, 12f), new Vector3(3.0f, 4.2f, 28f), matBerm);
+            CreateBerm(env.transform, new Vector3(9.5f, 2.0f, 12f), new Vector3(3.0f, 4.2f, 28f), matBerm);
+
+            // Vegetação lateral nos topos das bermas laterais
+            CreateOutdoorFoliageCrown(env.transform, new Vector3(-9.5f, 4.2f, 12f), new Vector3(2.5f, 1.8f, 26f), matFoliage);
+            CreateOutdoorFoliageCrown(env.transform, new Vector3(9.5f, 4.2f, 12f), new Vector3(2.5f, 1.8f, 26f), matFoliage);
+
+            // 5. Shooting Box (Caixa regulamentar de onde o atirador dispara)
+            CreateShootingBox(env.transform, Vector3.zero, matHazard);
+
+            // Bancada de apoio rústica de madeira à esquerda
+            CreateShootingBench(env.transform, new Vector3(-2.8f, 0, 0.6f), matWood);
+
+            // 6. Alvo Central com FOCO VISUAL (Exatamente como na ilustração enviada) a 7 metros
+            targets.Add(CreateIPSCTarget(root, "Target_FocoVisual_Centro (7m)", new Vector3(0f, 1.4f, 7.0f), false, matWood, true));
+
+            // Alvos de treino tático nas distâncias de 11m e 15m
+            targets.Add(CreateIPSCTarget(root, "Target_Esquerda (11m)", new Vector3(-2.8f, 1.4f, 11.0f), false, matWood, false));
+            targets.Add(CreateIPSCTarget(root, "Target_Direita (15m)", new Vector3(2.8f, 1.4f, 15.0f), false, matWood, false));
+
+            // Popper reativo de aço a 9 metros
+            CreateSteelPopper(root, "Popper_Aco_Centro (9m)", new Vector3(1.6f, 0, 9.0f), matSteel);
+        }
+
+        private static void CreateOutdoorFoliageCrown(Transform parent, Vector3 center, Vector3 size, Material matFoliage)
+        {
+            GameObject foliageGroup = new GameObject("Foliage_Trees_Ridge");
+            foliageGroup.transform.SetParent(parent);
+            foliageGroup.transform.position = center;
+
+            // Cria copas orgânicas de árvores e arbustos usando esferas com variação natural
+            int bushCount = Mathf.Max(3, Mathf.RoundToInt(size.x / 2.2f));
+            float startX = -size.x * 0.45f;
+            float stepX = size.x / bushCount;
+
+            for (int i = 0; i < bushCount; i++)
+            {
+                GameObject bush = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                bush.name = $"TreeCrown_{i}";
+                bush.transform.SetParent(foliageGroup.transform);
+                float posX = startX + (i * stepX) + Random.Range(-0.4f, 0.4f);
+                float posY = Random.Range(-0.3f, 0.4f);
+                float posZ = Random.Range(-0.5f, 0.5f);
+                bush.transform.localPosition = new Vector3(posX, posY, posZ);
+                float scale = Random.Range(2.2f, 3.4f);
+                bush.transform.localScale = new Vector3(scale * 1.2f, scale * 0.9f, scale * 1.1f);
+                bush.GetComponent<MeshRenderer>().material = matFoliage;
+                SafeDestroy(bush.GetComponent<Collider>());
+            }
+        }
+
         private static void CreateFramedPlywoodWall(Transform parent, Vector3 pos, Vector3 scale, Material matPlywood, Material matStud)
         {
             GameObject wallGroup = new GameObject("Plywood_Wall_Framed");
@@ -824,8 +914,8 @@ namespace IPSCSimulator.Setup
                         modelInstance.transform.localRotation = Quaternion.identity;
                         modelInstance.transform.localScale = Vector3.one;
                         muzzleObj.transform.localPosition = new Vector3(0f, 0.028f, 0.22f);
-                        adsPos = new Vector3(0f, -0.076f, 0.24f);
-                        hipPos = new Vector3(0.085f, -0.125f, 0.30f);
+                        adsPos = new Vector3(0f, -0.046f, 0.16f); // Alça e massa de mira coladas nos olhos (Conforme Ilustração "Seu Foco Visual")
+                        hipPos = new Vector3(0.085f, -0.125f, 0.28f);
                         slideObj = FindChildRecursive(modelInstance.transform, "Slide", "Pistol_A_Bolt");
                         magObj = FindChildRecursive(modelInstance.transform, "Magazine", "Pistol_A_Mag");
                         break;
@@ -839,8 +929,8 @@ namespace IPSCSimulator.Setup
                         modelInstance.transform.localRotation = Quaternion.identity;
                         modelInstance.transform.localScale = Vector3.one * 0.95f;
                         muzzleObj.transform.localPosition = new Vector3(0f, 0.035f, 0.28f);
-                        adsPos = new Vector3(0f, -0.082f, 0.24f);
-                        hipPos = new Vector3(0.085f, -0.130f, 0.30f);
+                        adsPos = new Vector3(0f, -0.050f, 0.17f);
+                        hipPos = new Vector3(0.085f, -0.130f, 0.28f);
                         slideObj = FindChildRecursive(modelInstance.transform, "DW_Hummer", "Hammer");
                         magObj = FindChildRecursive(modelInstance.transform, "DW_MagazineAssembly", "Cylinder", "Speedloader");
                         break;
@@ -854,8 +944,8 @@ namespace IPSCSimulator.Setup
                         modelInstance.transform.localRotation = Quaternion.identity;
                         modelInstance.transform.localScale = Vector3.one * 0.95f;
                         muzzleObj.transform.localPosition = new Vector3(0f, 0.040f, 0.65f);
-                        adsPos = new Vector3(0f, -0.098f, 0.26f);
-                        hipPos = new Vector3(0.095f, -0.140f, 0.34f);
+                        adsPos = new Vector3(0f, -0.065f, 0.19f);
+                        hipPos = new Vector3(0.095f, -0.140f, 0.32f);
                         slideObj = FindChildRecursive(modelInstance.transform, "WPN_AKM_bolt_carrier", "SMG_F_Bolt", "Slide", "Bolt");
                         magObj = FindChildRecursive(modelInstance.transform, "WPN_AKM_magazine", "SMG_F_Mag", "Magazine", "Mag");
                         break;
@@ -1552,7 +1642,7 @@ namespace IPSCSimulator.Setup
             return bullet;
         }
 
-        public static IPSCTarget CreateIPSCTarget(Transform parent, string name, Vector3 position, bool isNoShoot, Material woodMat)
+        public static IPSCTarget CreateIPSCTarget(Transform parent, string name, Vector3 position, bool isNoShoot, Material woodMat, bool withVisualFocus = false)
         {
             GameObject targetObj = new GameObject(name);
             targetObj.transform.SetParent(parent);
@@ -1583,7 +1673,7 @@ namespace IPSCSimulator.Setup
             board.transform.localScale = new Vector3(0.45f, 0.75f, 0.005f);
 
             Material targetMat = ProceduralMaterials.CreateMaterial(Color.white, isNoShoot ? "Mat_TargetNoShoot" : "Mat_TargetIPSC", 0.1f);
-            targetMat.mainTexture = ProceduralMaterials.CreateIPSCTargetTexture(isNoShoot);
+            targetMat.mainTexture = ProceduralMaterials.CreateIPSCTargetTexture(isNoShoot, withVisualFocus);
             board.GetComponent<MeshRenderer>().material = targetMat;
             SafeDestroy(board.GetComponent<Collider>());
 

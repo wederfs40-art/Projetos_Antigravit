@@ -37,6 +37,14 @@ namespace IPSCSimulator.EditorTools
             EditorUtility.DisplayDialog("Cena Salva", $"Cena principal salva em {scenePath}!\nVocê pode abri-la diretamente na pasta Assets/Scenes.", "OK");
         }
 
+        [MenuItem("IPSC Simulator/Cenários Diretos/⭐ Stand Aberto com Foco Visual (Ilustração)", false, 15)]
+        public static void BuildOutdoorPrecisionStand()
+        {
+            SceneGeneratorCore.BuildSelectedEnvironment(GameEnvironmentType.Outdoor_Precision_Stand, SelectedWeaponType.Pistol_9mm);
+            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+            EditorUtility.DisplayDialog("Stand Aberto Pronto", "Cenário de Tiro Aberto carregado com berma de terra, vegetação e alça/massa de mira alinhadas (Conforme Ilustração)!\nSegure o BOTÃO DIREITO para mirar próximo no centro dos olhos com zoom de foco!", "OK");
+        }
+
         [MenuItem("IPSC Simulator/Cenários Diretos/1. Pista Curta IPSC (Speed Option)", false, 20)]
         public static void BuildIPSCShort()
         {
