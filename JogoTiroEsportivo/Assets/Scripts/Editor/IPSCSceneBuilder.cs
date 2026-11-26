@@ -25,6 +25,14 @@ namespace IPSCSimulator.EditorTools
             EditorUtility.DisplayDialog("Menu Principal Pronto", "Cenário Tático BODYCAM carregado! Dê PLAY para disparar com o Fuzil AKM, Pistola M9T ou Revólver .357!", "OK");
         }
 
+        [MenuItem("IPSC Simulator/Gerar Menu de Arsenal CS2 (Canvas Loadout)", false, 5)]
+        public static void GenerateCS2LoadoutMenu()
+        {
+            IPSCSimulator.UI.LoadoutMenuManager.CreateProceduralLoadoutCanvas();
+            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+            EditorUtility.DisplayDialog("Menu de Arsenal CS2 Pronto", "Canvas de Seleção de Arsenal (Loadout) gerado com sucesso!\nAbas de categorias, grade de modelos com atributos, Preview 3D em tempo real e seleção de cenários integrados.", "OK");
+        }
+
         [MenuItem("IPSC Simulator/Salvar Cena Principal (IPSC_MainSimulation.unity)", false, 2)]
         public static void SaveMainSimulationScene()
         {
