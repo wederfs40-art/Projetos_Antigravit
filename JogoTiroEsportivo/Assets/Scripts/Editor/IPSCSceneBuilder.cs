@@ -19,10 +19,10 @@ namespace IPSCSimulator.EditorTools
         [MenuItem("IPSC Simulator/Montar Menu Principal & Simulador", false, 1)]
         public static void BuildMainMenu()
         {
-            SceneGeneratorCore.BuildSelectedEnvironment(GameEnvironmentType.IPSC_Outdoor_Short, SelectedWeaponType.Pistol_9mm);
+            SceneGeneratorCore.BuildSelectedEnvironment(GameEnvironmentType.Bodycam_ShootHouse, SelectedWeaponType.SMG_Tactical);
             if (TacticalGameManager.Instance != null) TacticalGameManager.Instance.ReturnToMainMenu();
             EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
-            EditorUtility.DisplayDialog("Menu Principal Pronto", "Menu Principal carregado! Dê PLAY para escolher entre Pistas IPSC, Estande Indoor ou Armazém estilo CS!", "OK");
+            EditorUtility.DisplayDialog("Menu Principal Pronto", "Cenário Tático BODYCAM carregado! Dê PLAY para disparar com o Fuzil AKM, Pistola M9T ou Revólver .357!", "OK");
         }
 
         [MenuItem("IPSC Simulator/Salvar Cena Principal (IPSC_MainSimulation.unity)", false, 2)]
@@ -32,7 +32,7 @@ namespace IPSCSimulator.EditorTools
             if (!Directory.Exists(scenesDir)) Directory.CreateDirectory(scenesDir);
             string scenePath = "Assets/Scenes/IPSC_MainSimulation.unity";
             Scene newScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            SceneGeneratorCore.BuildSelectedEnvironment(GameEnvironmentType.IPSC_Outdoor_Short, SelectedWeaponType.Pistol_9mm);
+            SceneGeneratorCore.BuildSelectedEnvironment(GameEnvironmentType.Bodycam_ShootHouse, SelectedWeaponType.SMG_Tactical);
             EditorSceneManager.SaveScene(newScene, scenePath);
             EditorUtility.DisplayDialog("Cena Salva", $"Cena principal salva em {scenePath}!\nVocê pode abri-la diretamente na pasta Assets/Scenes.", "OK");
         }

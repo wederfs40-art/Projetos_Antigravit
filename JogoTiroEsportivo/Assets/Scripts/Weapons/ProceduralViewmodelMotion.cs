@@ -37,10 +37,10 @@ namespace IPSCSimulator.Weapons
         [SerializeField] private float recoilReturnSpeed = 9.0f;
 
         [Header("Posicionamento Base")]
-        [SerializeField] private Vector3 hipPosition = new Vector3(0.18f, -0.20f, 0.40f);
-        [SerializeField] private Vector3 adsPosition = new Vector3(0f, -0.040f, 0.30f);
-        [SerializeField] private Vector3 sprintPosition = new Vector3(0.12f, -0.15f, 0.32f);
-        [SerializeField] private Vector3 sprintRotation = new Vector3(-25f, 32f, -18f); // High ready tático
+        [SerializeField] private Vector3 hipPosition = new Vector3(0.085f, -0.125f, 0.30f);
+        [SerializeField] private Vector3 adsPosition = new Vector3(0f, -0.076f, 0.24f);
+        [SerializeField] private Vector3 sprintPosition = new Vector3(0.10f, -0.11f, 0.25f);
+        [SerializeField] private Vector3 sprintRotation = new Vector3(-20f, 25f, -14f); // High ready tático
 
         private Vector3 _currentRecoilPos;
         private Vector3 _targetRecoilPos;

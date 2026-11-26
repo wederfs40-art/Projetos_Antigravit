@@ -34,7 +34,7 @@ namespace IPSCSimulator.Setup
 
         public static void GenerateCompleteShootingRange()
         {
-            BuildSelectedEnvironment(GameEnvironmentType.IPSC_Outdoor_Short, SelectedWeaponType.Pistol_9mm);
+            BuildSelectedEnvironment(GameEnvironmentType.Bodycam_ShootHouse, SelectedWeaponType.SMG_Tactical);
         }
 
         public static void BuildSelectedEnvironment(GameEnvironmentType envType, SelectedWeaponType weaponType)
@@ -456,7 +456,7 @@ namespace IPSCSimulator.Setup
         {
             SetupBodycamWarehouseLighting();
 
-            Material matPlywood = ProceduralMaterials.CreatePlywoodOSBMaterial();
+            Material matPlywood = PBRMaterialFactory.CreatePlywoodShootHousePBRMaterial();
             Material matStud = ProceduralMaterials.CreateMaterial(new Color(0.68f, 0.48f, 0.28f), "Mat_PineStud_2x4", 0.15f, 0.0f);
             Material matTruss = ProceduralMaterials.CreateTrussSteelMaterial();
             Material matRoof = ProceduralMaterials.CreateMaterial(new Color(0.20f, 0.22f, 0.24f), "Mat_WarehouseRoof", 0.2f, 0.5f);
@@ -884,6 +884,7 @@ namespace IPSCSimulator.Setup
                 PBRMaterialFactory.CreateTacticalCamoPBRMaterial(),
                 PBRMaterialFactory.CreateCombatGlovePBRMaterial(),
                 PBRMaterialFactory.CreateGunSteelPBRMaterial(new Color(0.12f, 0.12f, 0.14f)));
+            arms.SetWeaponIKStance(weaponType);
         }
 
         /// <summary>

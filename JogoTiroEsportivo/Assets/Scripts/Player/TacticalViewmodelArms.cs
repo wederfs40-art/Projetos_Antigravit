@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace IPSCSimulator.Player
 {
+    using IPSCSimulator.Match;
     using IPSCSimulator.Utilities;
     using IPSCSimulator.Weapons;
 
@@ -153,13 +154,50 @@ namespace IPSCSimulator.Player
                     Material[] mats = smr.materials;
                     if (mats != null && mats.Length > 0)
                     {
-                        mats[0] = gloveMat;
-                        if (mats.Length > 1) mats[1] = sleeveMat;
+                        for (int m = 0; m < mats.Length; m++)
+                        {
+                            if (m == 0) mats[m] = gloveMat;
+                            else if (m == 1) mats[m] = sleeveMat;
+                            else mats[m] = matArmor != null ? matArmor : gloveMat;
+                        }
                         smr.materials = mats;
                     }
                 }
 
                 _isSkeletalMeshLoaded = true;
+            }
+        }
+
+        /// <summary>
+        /// Ajusta a postura de IK das mãos dependendo se é Pistola (duas mãos no punho) ou Fuzil (mão esquerda no guarda-mão).
+        /// </summary>
+        public void SetWeaponIKStance(SelectedWeaponType weaponType)
+        {
+            if (rightHandTarget == null || leftHandTarget == null) return;
+
+            if (weaponType == SelectedWeaponType.SMG_Tactical)
+            {
+                // Empunhadura de Fuzil/Carabina tática (C-Clamp / Handguard Grip estilo Bodycam / Tarkov)
+                rightHandTarget.localPosition = new Vector3(0.005f, -0.082f, -0.045f);
+                rightHandTarget.localRotation = Quaternion.Euler(18f, 2f, -4f);
+
+                leftHandTarget.localPosition = new Vector3(-0.022f, -0.015f, 0.285f);
+                leftHandTarget.localRotation = Quaternion.Euler(22f, 15f, 32f);
+
+                if (leftElbowHint != null) leftElbowHint.localPosition = new Vector3(-0.42f, -0.25f, 0.18f);
+                if (rightElbowHint != null) rightElbowHint.localPosition = new Vector3(0.38f, -0.30f, 0.05f);
+            }
+            else
+            {
+                // Empunhadura de Pistola/Revólver (Two-Handed Modern Isosceles Grip estilo Unrecord)
+                rightHandTarget.localPosition = new Vector3(0.005f, -0.052f, 0.055f);
+                rightHandTarget.localRotation = Quaternion.Euler(14f, 2f, -4f);
+
+                leftHandTarget.localPosition = new Vector3(-0.015f, -0.062f, 0.065f);
+                leftHandTarget.localRotation = Quaternion.Euler(20f, 18f, -12f);
+
+                if (leftElbowHint != null) leftElbowHint.localPosition = new Vector3(-0.38f, -0.32f, 0.08f);
+                if (rightElbowHint != null) rightElbowHint.localPosition = new Vector3(0.38f, -0.32f, 0.08f);
             }
         }
 
