@@ -25,6 +25,18 @@ namespace IPSCSimulator.EditorTools
             EditorUtility.DisplayDialog("Menu Principal Pronto", "Menu Principal carregado! Dê PLAY para escolher entre Pistas IPSC, Estande Indoor ou Armazém estilo CS!", "OK");
         }
 
+        [MenuItem("IPSC Simulator/Salvar Cena Principal (IPSC_MainSimulation.unity)", false, 2)]
+        public static void SaveMainSimulationScene()
+        {
+            string scenesDir = "Assets/Scenes";
+            if (!Directory.Exists(scenesDir)) Directory.CreateDirectory(scenesDir);
+            string scenePath = "Assets/Scenes/IPSC_MainSimulation.unity";
+            Scene newScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            SceneGeneratorCore.BuildSelectedEnvironment(GameEnvironmentType.IPSC_Outdoor_Short, SelectedWeaponType.Pistol_9mm);
+            EditorSceneManager.SaveScene(newScene, scenePath);
+            EditorUtility.DisplayDialog("Cena Salva", $"Cena principal salva em {scenePath}!\nVocê pode abri-la diretamente na pasta Assets/Scenes.", "OK");
+        }
+
         [MenuItem("IPSC Simulator/Cenários Diretos/1. Pista Curta IPSC (Speed Option)", false, 20)]
         public static void BuildIPSCShort()
         {
