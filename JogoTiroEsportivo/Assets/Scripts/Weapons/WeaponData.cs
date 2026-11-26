@@ -7,19 +7,20 @@ namespace IPSCSimulator.Weapons
     /// </summary>
     public enum WeaponCategory
     {
-        Pistolas,
-        Espingardas,
-        Submetralhadoras,
-        Fuzis,
-        Snipers,
-        Equipamentos,
+        Pistolas = 0,
+        Espingardas = 1,
+        Submetralhadoras = 2,
+        Fuzis = 3,
+        Snipers = 4,
+        Equipamentos = 5,
+        Revolvers = 6,
 
-        // Aliases para manter total compatibilidade com o menu do projeto
+        // Aliases para compatibilidade total
         Pistols = Pistolas,
-        Revolvers = Pistolas,
+        Shotguns = Espingardas,
         SubmachineGuns = Submetralhadoras,
         AssaultRifles = Fuzis,
-        Shotguns = Espingardas
+        Equipment = Equipamentos
     }
 
     /// <summary>

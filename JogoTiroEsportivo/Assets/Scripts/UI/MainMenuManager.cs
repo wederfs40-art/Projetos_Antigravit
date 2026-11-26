@@ -3,6 +3,7 @@ using UnityEngine;
 namespace IPSCSimulator.UI
 {
     using IPSCSimulator.Match;
+    using IPSCSimulator.Weapons;
 
     /// <summary>
     /// Gerencia a interface gráfica (IMGUI) do Menu Principal e do Menu de Pausa (ESC).

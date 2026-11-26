@@ -11,15 +11,6 @@ namespace IPSCSimulator.Match
         Outdoor_Precision_Stand // Stand de Tiro Aberto com Berma e Foco Visual (Conforme Ilustração)
     }
 
-    public enum WeaponCategory
-    {
-        Pistols,        // Pistolas Semiautomáticas
-        Revolvers,      // Revólveres & Magnuns
-        SubmachineGuns, // Submetralhadoras (SMGs)
-        AssaultRifles,  // Fuzis de Assalto (Rifles)
-        Shotguns        // Espingardas Calibre 12
-    }
-
     public enum SelectedWeaponType
     {
         // --- PISTOLAS ---
