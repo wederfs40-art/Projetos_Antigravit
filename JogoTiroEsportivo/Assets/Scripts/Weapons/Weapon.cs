@@ -137,9 +137,16 @@ namespace IPSCSimulator.Weapons
                 // Fallback instantâneo direto de Raycast caso o prefab do projétil não esteja presente
                 Vector3 shootOrigin = muzzlePoint.position;
                 Vector3 shootDir = muzzlePoint.forward;
-                if (Physics.Raycast(shootOrigin, shootDir, out RaycastHit hit, 250f, hitLayers, QueryTriggerInteraction.Collide))
+                RaycastHit[] hits = Physics.RaycastAll(shootOrigin, shootDir, 250f, hitLayers, QueryTriggerInteraction.Collide);
+                if (hits != null && hits.Length > 0)
                 {
-                    Bullet.ProcessDirectHit(hit, shootDir, bulletHoleDecalPrefab);
+                    System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+                    foreach (var h in hits)
+                    {
+                        if (h.collider == null || Bullet.IsPlayerOrWeapon(h.collider)) continue;
+                        Bullet.ProcessDirectHit(h, shootDir, bulletHoleDecalPrefab);
+                        break;
+                    }
                 }
             }
 

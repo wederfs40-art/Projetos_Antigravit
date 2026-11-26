@@ -227,5 +227,94 @@ namespace IPSCSimulator.Utilities
 
             return mat;
         }
+
+        /// <summary>
+        /// Material PBR de Paredes de Madeira/OSB de Shoot House Tático (Inspirado no visual de Bodycam).
+        /// </summary>
+        public static Material CreatePlywoodShootHousePBRMaterial()
+        {
+            Material mat = new Material(GetStandardShader());
+            mat.name = "PBR_ShootHouse_OSB";
+
+            int size = 256;
+            Texture2D albedo = new Texture2D(size, size);
+            Texture2D height = new Texture2D(size, size);
+
+            Color woodLight = new Color(0.80f, 0.65f, 0.45f);
+            Color woodDark = new Color(0.58f, 0.44f, 0.28f);
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    // Fibras orientadas de madeira com veios e nós
+                    float grain = Mathf.Sin((x * 0.25f) + Mathf.PerlinNoise(x * 0.08f, y * 0.02f) * 12f) * 0.5f + 0.5f;
+                    float chips = Mathf.PerlinNoise(x * 0.35f, y * 0.35f) * 0.35f;
+                    float total = Mathf.Clamp01((grain * 0.65f) + chips);
+
+                    Color c = Color.Lerp(woodDark, woodLight, total);
+                    albedo.SetPixel(x, y, c);
+                    height.SetPixel(x, y, new Color(total, total, total));
+                }
+            }
+            albedo.Apply();
+            height.Apply();
+
+            Texture2D normalMap = GenerateNormalMapFromHeight(height, 2.5f);
+
+            mat.mainTexture = albedo;
+            mat.EnableKeyword("_NORMALMAP");
+            mat.SetTexture("_BumpMap", normalMap);
+            mat.SetFloat("_BumpScale", 1.2f);
+            mat.SetFloat("_Metallic", 0.02f);
+            mat.SetFloat("_Glossiness", 0.18f);
+
+            return mat;
+        }
+
+        /// <summary>
+        /// Material PBR de Solo de Estande Tático (Cascalho e Terra Compactada com Relevo Normal).
+        /// </summary>
+        public static Material CreateRealisticShootRangeGroundPBRMaterial()
+        {
+            Material mat = new Material(GetStandardShader());
+            mat.name = "PBR_Tactical_Ground";
+
+            int size = 256;
+            Texture2D albedo = new Texture2D(size, size);
+            Texture2D height = new Texture2D(size, size);
+
+            Color groundBase = new Color(0.55f, 0.48f, 0.38f);
+            Color groundDark = new Color(0.40f, 0.34f, 0.26f);
+            Color groundLight = new Color(0.68f, 0.60f, 0.48f);
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float macro = Mathf.PerlinNoise(x * 0.04f, y * 0.04f);
+                    float pebbles = Mathf.PerlinNoise(x * 0.45f, y * 0.45f) * 0.4f;
+                    float micro = (UnityEngine.Random.value - 0.5f) * 0.12f;
+                    float total = Mathf.Clamp01(macro * 0.6f + pebbles + micro);
+
+                    Color c = Color.Lerp(groundDark, groundLight, total);
+                    albedo.SetPixel(x, y, c);
+                    height.SetPixel(x, y, new Color(total, total, total));
+                }
+            }
+            albedo.Apply();
+            height.Apply();
+
+            Texture2D normalMap = GenerateNormalMapFromHeight(height, 3.2f);
+
+            mat.mainTexture = albedo;
+            mat.EnableKeyword("_NORMALMAP");
+            mat.SetTexture("_BumpMap", normalMap);
+            mat.SetFloat("_BumpScale", 1.6f);
+            mat.SetFloat("_Metallic", 0.03f);
+            mat.SetFloat("_Glossiness", 0.12f);
+
+            return mat;
+        }
     }
 }

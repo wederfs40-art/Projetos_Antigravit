@@ -40,6 +40,7 @@ namespace IPSCSimulator.Weapons
         private Vector3 _targetRecoilPosition;
         private Vector3 _currentRecoilRotation;
         private Vector3 _targetRecoilRotation;
+        private ProceduralViewmodelMotion _proceduralMotion;
 
         [Header("Disparo e Cadência")]
         [SerializeField] private bool isAutomatic = false;
@@ -57,6 +58,11 @@ namespace IPSCSimulator.Weapons
             recoilKickRotation *= recoilMult;
         }
 
+        private void Start()
+        {
+            _proceduralMotion = GetComponent<ProceduralViewmodelMotion>();
+        }
+
         private void OnEnable()
         {
             Weapon.OnWeaponFired += ApplyRecoil;
@@ -70,9 +76,14 @@ namespace IPSCSimulator.Weapons
         private void Update()
         {
             HandleInputs();
-            ProcessSwayAndBreathing();
-            ProcessRecoilRecovery();
-            UpdateWeaponTransform();
+
+            // Se ProceduralViewmodelMotion estiver ativo, ele assume o controle unificado da postura, sway e recuo
+            if (_proceduralMotion == null)
+            {
+                ProcessSwayAndBreathing();
+                ProcessRecoilRecovery();
+                UpdateWeaponTransform();
+            }
         }
 
         private void HandleInputs()

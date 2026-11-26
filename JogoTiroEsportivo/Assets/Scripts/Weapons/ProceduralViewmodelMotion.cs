@@ -206,10 +206,17 @@ namespace IPSCSimulator.Weapons
 
             // Posição final composta
             Vector3 targetPosition = baseTargetPos + _swayPosition + _currentRecoilPos;
-            Quaternion targetRotation = baseTargetRot * _swayRotation * Quaternion.Euler(_currentRecoilRot);
+            Quaternion targetRotation = baseTargetRot * _swayRotation * Quaternion.Euler(_freeAimOffset.y, _freeAimOffset.x, 0f) * Quaternion.Euler(_currentRecoilRot);
 
             transform.localPosition = Vector3.Lerp(transform.localPosition, targetPosition, Time.deltaTime * transitionSpeed);
             transform.localRotation = Quaternion.Slerp(transform.localRotation, targetRotation, Time.deltaTime * transitionSpeed);
+        }
+
+        private Vector2 _freeAimOffset;
+
+        public void SetFreeAimOffset(float x, float y)
+        {
+            _freeAimOffset = new Vector2(x, y);
         }
 
         public void ConfigureStancePositions(Vector3 hip, Vector3 ads)

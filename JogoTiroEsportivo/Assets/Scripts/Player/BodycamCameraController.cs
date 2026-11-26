@@ -106,11 +106,19 @@ namespace IPSCSimulator.Player
                 float tilt = -moveX * bobTiltAngle;
                 transform.localRotation = Quaternion.Euler(_cameraPitch, 0f, tilt);
 
-                // Aplica o Free Aim na arma
+                // Aplica o Free Aim na arma integrado ao sistema de viewmodel motion
                 if (weaponHolder != null)
                 {
-                    Quaternion freeAimRot = Quaternion.Euler(_freeAimY, _freeAimX, 0f);
-                    weaponHolder.localRotation = Quaternion.Slerp(weaponHolder.localRotation, freeAimRot, 18f * Time.deltaTime);
+                    var vm = weaponHolder.GetComponent<IPSCSimulator.Weapons.ProceduralViewmodelMotion>();
+                    if (vm != null)
+                    {
+                        vm.SetFreeAimOffset(_freeAimX, _freeAimY);
+                    }
+                    else
+                    {
+                        Quaternion freeAimRot = Quaternion.Euler(_freeAimY, _freeAimX, 0f);
+                        weaponHolder.localRotation = Quaternion.Slerp(weaponHolder.localRotation, freeAimRot, 18f * Time.deltaTime);
+                    }
                 }
 
                 // ==========================================

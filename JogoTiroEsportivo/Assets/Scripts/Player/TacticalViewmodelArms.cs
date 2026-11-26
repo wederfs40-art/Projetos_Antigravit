@@ -1,15 +1,19 @@
+using System;
 using UnityEngine;
 
 namespace IPSCSimulator.Player
 {
+    using IPSCSimulator.Utilities;
     using IPSCSimulator.Weapons;
 
     /// <summary>
-    /// Sistema de Viewmodel com Braços Articulados e Cinemática Inversa (Two-Bone IK):
-    /// 1. Constrói a estrutura esquelética procedural (Ombro -> Cotovelo -> Pulso -> Mão com Dedos Articulados)
-    /// 2. Aplica Two-Bone IK Solver analítico em tempo real
-    /// 3. Mantém a mão direita fixa no punho da arma (Grip) e a mão esquerda no guarda-mão (Handguard)
-    /// 4. Desacopla dinamicamente a mão esquerda durante a recarga para trocar de carregador
+    /// Sistema de Viewmodel com Braços Articulados Fotorrealistas (Skeletal Mesh) e Cinemática Inversa (Two-Bone IK):
+    /// 1. Instancia a malha esquelética rigged com textura e materiais PBR de luvas táticas militares
+    /// 2. Oculta a cabeça do modelo (Head.localScale = 0) para desobstruir 100% o campo de visão
+    /// 3. Aplica Two-Bone IK Solver analítico de alta precisão nos braços (Ombro -> Cotovelo -> Mão)
+    /// 4. Trava a mão direita no punho (Grip) e a mão esquerda no apoio/guarda-mão (Handguard)
+    /// 5. Desacopla e move a mão esquerda realisticamente durante recargas táticas
+    /// 6. Articula os dedos individualmente ao redor da empunhadura e gatilho
     /// </summary>
     public class TacticalViewmodelArms : MonoBehaviour
     {
@@ -23,110 +27,139 @@ namespace IPSCSimulator.Player
         [SerializeField] private float upperArmLength = 0.28f;
         [SerializeField] private float forearmLength = 0.26f;
 
-        [Header("Ombros (Origens do Tronco)")]
-        [SerializeField] private Vector3 rightShoulderLocal = new Vector3(0.20f, -0.18f, -0.15f);
-        [SerializeField] private Vector3 leftShoulderLocal = new Vector3(-0.20f, -0.18f, -0.15f);
-
-        // Estrutura do Braço Direito
-        private Transform _rightShoulder;
-        private Transform _rightElbow;
-        private Transform _rightWrist;
+        // Estrutura Óssea Rigged (Braço Direito)
+        private Transform _rightUpperArm;
+        private Transform _rightLowerArm;
         private Transform _rightHand;
 
-        // Estrutura do Braço Esquerdo
-        private Transform _leftShoulder;
-        private Transform _leftElbow;
-        private Transform _leftWrist;
+        // Dedos da Mão Direita
+        private Transform _rIndexProx;
+        private Transform _rIndexInter;
+        private Transform _rIndexDist;
+        private Transform _rThumbProx;
+        private Transform _rThumbInter;
+        private Transform _rThumbDist;
+        private Transform _rMiddleProx;
+        private Transform _rRingProx;
+        private Transform _rPinkyProx;
+
+        // Estrutura Óssea Rigged (Braço Esquerdo)
+        private Transform _leftUpperArm;
+        private Transform _leftLowerArm;
         private Transform _leftHand;
 
+        // Dedos da Mão Esquerda
+        private Transform _lThumbProx;
+        private Transform _lIndexProx;
+        private Transform _lMiddleProx;
+        private Transform _lRingProx;
+        private Transform _lPinkyProx;
+
+        private GameObject _rigInstance;
         private TacticalWeaponCycles _cycles;
+        private bool _isSkeletalMeshLoaded = false;
 
         public void InitializeArms(Transform weaponHolder, Material matSleeve, Material matGlove, Material matArmor)
         {
             _cycles = weaponHolder.GetComponentInChildren<TacticalWeaponCycles>();
 
-            // Criação das origens dos ombros
-            GameObject rShoulderObj = new GameObject("Shoulder_R");
-            rShoulderObj.transform.SetParent(transform);
-            rShoulderObj.transform.localPosition = rightShoulderLocal;
-            _rightShoulder = rShoulderObj.transform;
-
-            GameObject lShoulderObj = new GameObject("Shoulder_L");
-            lShoulderObj.transform.SetParent(transform);
-            lShoulderObj.transform.localPosition = leftShoulderLocal;
-            _leftShoulder = lShoulderObj.transform;
-
-            // Criação dos membros e ossos articulados
-            BuildArmBones(_rightShoulder, true, matSleeve, matGlove, matArmor, out _rightElbow, out _rightWrist, out _rightHand);
-            BuildArmBones(_leftShoulder, false, matSleeve, matGlove, matArmor, out _leftElbow, out _leftWrist, out _leftHand);
-
-            // Cria alvos de IK se não existirem
+            // Cria os pontos de ancoragem da arma (Grip, Handguard e Hints de Cotovelo)
             CreateDefaultIKTargets(weaponHolder);
+
+            // Carrega e instancia a malha esquelética 3D rigged
+            LoadSkeletalArms(matSleeve, matGlove, matArmor);
         }
 
-        private void BuildArmBones(Transform shoulder, bool isRight, Material matSleeve, Material matGlove, Material matArmor,
-            out Transform elbow, out Transform wrist, out Transform hand)
+        private void LoadSkeletalArms(Material matSleeve, Material matGlove, Material matArmor)
         {
-            // 1. Cotovelo
-            GameObject elbowObj = new GameObject(isRight ? "Elbow_R" : "Elbow_L");
-            elbowObj.transform.SetParent(shoulder);
-            elbow = elbowObj.transform;
-
-            // Malha do braço superior (Upper Arm / Manga)
-            GameObject upperArmMesh = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            upperArmMesh.name = "UpperArm_Mesh";
-            upperArmMesh.transform.SetParent(shoulder);
-            upperArmMesh.transform.localScale = new Vector3(0.082f, upperArmLength * 0.5f, 0.082f);
-            upperArmMesh.GetComponent<MeshRenderer>().material = matSleeve;
-            Destroy(upperArmMesh.GetComponent<Collider>());
-
-            // 2. Pulso
-            GameObject wristObj = new GameObject(isRight ? "Wrist_R" : "Wrist_L");
-            wristObj.transform.SetParent(elbow);
-            wrist = wristObj.transform;
-
-            // Malha do antebraço (Forearm / Manga)
-            GameObject forearmMesh = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            forearmMesh.name = "Forearm_Mesh";
-            forearmMesh.transform.SetParent(elbow);
-            forearmMesh.transform.localScale = new Vector3(0.074f, forearmLength * 0.5f, 0.074f);
-            forearmMesh.GetComponent<MeshRenderer>().material = matSleeve;
-            Destroy(forearmMesh.GetComponent<Collider>());
-
-            // 3. Mão (Luva Tática)
-            GameObject handObj = new GameObject(isRight ? "Hand_R" : "Hand_L");
-            handObj.transform.SetParent(wrist);
-            hand = handObj.transform;
-
-            GameObject palm = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            palm.name = "Glove_Palm";
-            palm.transform.SetParent(hand);
-            palm.transform.localPosition = new Vector3(0, 0, 0.035f);
-            palm.transform.localScale = new Vector3(0.065f, 0.038f, 0.080f);
-            palm.GetComponent<MeshRenderer>().material = matGlove;
-            Destroy(palm.GetComponent<Collider>());
-
-            // Placa reforçada de nó dos dedos (Knuckle Armor)
-            GameObject knuckle = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            knuckle.name = "Knuckle_Armor";
-            knuckle.transform.SetParent(palm.transform);
-            knuckle.transform.localPosition = new Vector3(0, 0.55f, 0.15f);
-            knuckle.transform.localScale = new Vector3(0.92f, 0.28f, 0.65f);
-            knuckle.GetComponent<MeshRenderer>().material = matArmor;
-            Destroy(knuckle.GetComponent<Collider>());
-
-            // 5 Dedos Articulados em volta da empunhadura
-            for (int f = 0; f < 5; f++)
+            if (_rigInstance != null)
             {
-                float posX = -0.024f + (f * 0.012f);
-                GameObject finger = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                finger.name = $"Finger_{f}";
-                finger.transform.SetParent(hand);
-                finger.transform.localPosition = new Vector3(posX, -0.012f, 0.085f);
-                finger.transform.localScale = new Vector3(0.011f, 0.012f, 0.032f);
-                finger.transform.localRotation = Quaternion.Euler(28f, (f - 2) * 4f, 0);
-                finger.GetComponent<MeshRenderer>().material = matGlove;
-                Destroy(finger.GetComponent<Collider>());
+                Destroy(_rigInstance);
+            }
+
+            GameObject armaturePrefab = null;
+#if UNITY_EDITOR
+            armaturePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Starter Assets/Runtime/ThirdPersonController/Prefabs/PlayerArmature.prefab");
+#endif
+
+            if (armaturePrefab != null)
+            {
+                _rigInstance = Instantiate(armaturePrefab, transform);
+                _rigInstance.name = "FPS_Skeletal_Arms_Rig";
+                // Ancorado no tronco ligeiramente abaixo e recuado da câmera
+                _rigInstance.transform.localPosition = new Vector3(0f, -1.38f, -0.06f);
+                _rigInstance.transform.localRotation = Quaternion.identity;
+                _rigInstance.transform.localScale = Vector3.one;
+
+                // Remove componentes de física/controle que colidiriam com o jogador
+                foreach (Collider c in _rigInstance.GetComponentsInChildren<Collider>())
+                {
+                    Destroy(c);
+                }
+                foreach (MonoBehaviour mb in _rigInstance.GetComponents<MonoBehaviour>())
+                {
+                    if (mb != this) Destroy(mb);
+                }
+
+                // Desativa Animator para que o solver IK controle os ossos diretamente
+                Animator anim = _rigInstance.GetComponent<Animator>();
+                if (anim != null) anim.enabled = false;
+
+                // Oculta cabeça e pescoço para nunca obstruir a câmera
+                Transform head = FindBoneRecursive(_rigInstance.transform, "Head");
+                if (head != null) head.localScale = Vector3.zero;
+                Transform neck = FindBoneRecursive(_rigInstance.transform, "Neck");
+                if (neck != null) neck.localScale = Vector3.zero;
+
+                // Mapeia ossos do braço direito
+                _rightUpperArm = FindBoneRecursive(_rigInstance.transform, "Right_UpperArm");
+                _rightLowerArm = FindBoneRecursive(_rigInstance.transform, "Right_LowerArm");
+                _rightHand = FindBoneRecursive(_rigInstance.transform, "Right_Hand");
+
+                _rIndexProx = FindBoneRecursive(_rigInstance.transform, "Right_IndexProximal");
+                _rIndexInter = FindBoneRecursive(_rigInstance.transform, "Right_IndexIntermediate");
+                _rIndexDist = FindBoneRecursive(_rigInstance.transform, "Right_IndexDistal");
+
+                _rThumbProx = FindBoneRecursive(_rigInstance.transform, "Right_ThumbProximal");
+                _rThumbInter = FindBoneRecursive(_rigInstance.transform, "Right_ThumbIntermediate");
+                _rThumbDist = FindBoneRecursive(_rigInstance.transform, "Right_ThumbDistal");
+
+                _rMiddleProx = FindBoneRecursive(_rigInstance.transform, "Right_MiddleProximal");
+                _rRingProx = FindBoneRecursive(_rigInstance.transform, "Right_RingProximal");
+                _rPinkyProx = FindBoneRecursive(_rigInstance.transform, "Right_PinkyProximal");
+
+                // Mapeia ossos do braço esquerdo
+                _leftUpperArm = FindBoneRecursive(_rigInstance.transform, "Left_UpperArm");
+                _leftLowerArm = FindBoneRecursive(_rigInstance.transform, "Left_LowerArm");
+                _leftHand = FindBoneRecursive(_rigInstance.transform, "Left_Hand");
+
+                _lThumbProx = FindBoneRecursive(_rigInstance.transform, "Left_ThumbProximal");
+                _lIndexProx = FindBoneRecursive(_rigInstance.transform, "Left_IndexProximal");
+                _lMiddleProx = FindBoneRecursive(_rigInstance.transform, "Left_MiddleProximal");
+                _lRingProx = FindBoneRecursive(_rigInstance.transform, "Left_RingProximal");
+                _lPinkyProx = FindBoneRecursive(_rigInstance.transform, "Left_PinkyProximal");
+
+                // Aplica materiais PBR de luvas de combate e mangas táticas
+                SkinnedMeshRenderer smr = _rigInstance.GetComponentInChildren<SkinnedMeshRenderer>();
+                if (smr != null)
+                {
+                    smr.quality = SkinQuality.Bone4;
+                    smr.updateWhenOffscreen = true;
+
+                    Material gloveMat = matGlove != null ? matGlove : PBRMaterialFactory.CreateCombatGlovePBRMaterial();
+                    Material sleeveMat = matSleeve != null ? matSleeve : PBRMaterialFactory.CreateTacticalCamoPBRMaterial();
+
+                    Material[] mats = smr.materials;
+                    if (mats != null && mats.Length > 0)
+                    {
+                        mats[0] = gloveMat;
+                        if (mats.Length > 1) mats[1] = sleeveMat;
+                        smr.materials = mats;
+                    }
+                }
+
+                _isSkeletalMeshLoaded = true;
             }
         }
 
@@ -134,19 +167,20 @@ namespace IPSCSimulator.Player
         {
             if (rightHandTarget == null)
             {
-                GameObject rTarget = new GameObject("IK_Target_RightHand (Grip)");
+                GameObject rTarget = new GameObject("IK_Target_RightHand");
                 rTarget.transform.SetParent(weaponHolder);
-                rTarget.transform.localPosition = new Vector3(0f, -0.055f, 0.14f);
-                rTarget.transform.localRotation = Quaternion.Euler(12f, 0, 0);
+                rTarget.transform.localPosition = new Vector3(0.005f, -0.052f, 0.055f);
+                rTarget.transform.localRotation = Quaternion.Euler(14f, 2f, -4f);
                 rightHandTarget = rTarget.transform;
             }
 
             if (leftHandTarget == null)
             {
-                GameObject lTarget = new GameObject("IK_Target_LeftHand (Handguard)");
+                GameObject lTarget = new GameObject("IK_Target_LeftHand");
                 lTarget.transform.SetParent(weaponHolder);
-                lTarget.transform.localPosition = new Vector3(-0.045f, -0.060f, 0.26f);
-                lTarget.transform.localRotation = Quaternion.Euler(22f, 25f, -15f);
+                // Postura de pegada de suporte de pistola (envolve a mão direita pela frente do punho)
+                lTarget.transform.localPosition = new Vector3(-0.015f, -0.062f, 0.065f);
+                lTarget.transform.localRotation = Quaternion.Euler(20f, 18f, -12f);
                 leftHandTarget = lTarget.transform;
             }
 
@@ -154,7 +188,7 @@ namespace IPSCSimulator.Player
             {
                 GameObject rHint = new GameObject("IK_Hint_RightElbow");
                 rHint.transform.SetParent(transform);
-                rHint.transform.localPosition = new Vector3(0.40f, -0.35f, 0.05f);
+                rHint.transform.localPosition = new Vector3(0.38f, -0.32f, 0.08f);
                 rightElbowHint = rHint.transform;
             }
 
@@ -162,58 +196,92 @@ namespace IPSCSimulator.Player
             {
                 GameObject lHint = new GameObject("IK_Hint_LeftElbow");
                 lHint.transform.SetParent(transform);
-                lHint.transform.localPosition = new Vector3(-0.40f, -0.35f, 0.05f);
+                lHint.transform.localPosition = new Vector3(-0.38f, -0.32f, 0.08f);
                 leftElbowHint = lHint.transform;
             }
         }
 
         private void LateUpdate()
         {
-            if (_rightShoulder == null || _leftShoulder == null) return;
+            if (!_isSkeletalMeshLoaded || _rightUpperArm == null || _leftUpperArm == null) return;
 
-            // Resolve IK do Braço Direito (Mão no Punho/Grip)
-            if (rightHandTarget != null)
+            // 1. Two-Bone IK Solver do Braço Direito (Mão no Punho/Grip)
+            if (rightHandTarget != null && _rightHand != null)
             {
-                SolveTwoBoneIK(_rightShoulder, _rightElbow, _rightWrist, _rightHand,
-                    rightHandTarget.position, rightHandTarget.rotation,
-                    rightElbowHint != null ? rightElbowHint.position : _rightShoulder.position + Vector3.right * 0.3f);
+                Vector3 hint = rightElbowHint != null ? rightElbowHint.position : _rightUpperArm.position + Vector3.right * 0.35f;
+                SolveTwoBoneIK(_rightUpperArm, _rightLowerArm, _rightHand, rightHandTarget.position, rightHandTarget.rotation, hint);
+
+                // Articulação dos Dedos da Mão Direita (Grip Tático e Dedo no Gatilho)
+                ApplyRightHandFingers();
             }
 
-            // Resolve IK do Braço Esquerdo (Mão no Guarda-Mão / Suporte)
-            if (leftHandTarget != null)
+            // 2. Two-Bone IK Solver do Braço Esquerdo (Mão de Apoio ou Recarga)
+            if (leftHandTarget != null && _leftHand != null)
             {
                 Vector3 targetPos = leftHandTarget.position;
                 Quaternion targetRot = leftHandTarget.rotation;
 
-                // Se estiver recarregando, a mão esquerda se descola para baixo em direção ao magazine
+                // Deslocamento dinâmico em caso de recarga
                 if (_cycles != null && _cycles.IsReloading)
                 {
-                    targetPos += new Vector3(0.04f, -0.14f, -0.08f);
-                    targetRot = Quaternion.Euler(45f, -10f, 20f);
+                    targetPos += new Vector3(0.05f, -0.16f, -0.09f);
+                    targetRot = Quaternion.Euler(50f, -15f, 25f);
                 }
 
-                SolveTwoBoneIK(_leftShoulder, _leftElbow, _leftWrist, _leftHand,
-                    targetPos, targetRot,
-                    leftElbowHint != null ? leftElbowHint.position : _leftShoulder.position + Vector3.left * 0.3f);
+                Vector3 hint = leftElbowHint != null ? leftElbowHint.position : _leftUpperArm.position + Vector3.left * 0.35f;
+                SolveTwoBoneIK(_leftUpperArm, _leftLowerArm, _leftHand, targetPos, targetRot, hint);
+
+                // Articulação dos Dedos da Mão Esquerda (Envolve a mão direita ou o guarda-mão)
+                ApplyLeftHandFingers();
             }
+        }
+
+        private void ApplyRightHandFingers()
+        {
+            // Dedo indicador descansando no guarda-mato ou acionando o gatilho
+            if (_rIndexProx != null) _rIndexProx.localRotation = Quaternion.Euler(15f, 4f, 8f);
+            if (_rIndexInter != null) _rIndexInter.localRotation = Quaternion.Euler(28f, 0f, 0f);
+            if (_rIndexDist != null) _rIndexDist.localRotation = Quaternion.Euler(20f, 0f, 0f);
+
+            // Polegar envolvendo o lado esquerdo da armação
+            if (_rThumbProx != null) _rThumbProx.localRotation = Quaternion.Euler(-18f, -28f, -12f);
+            if (_rThumbInter != null) _rThumbInter.localRotation = Quaternion.Euler(22f, 0f, 0f);
+            if (_rThumbDist != null) _rThumbDist.localRotation = Quaternion.Euler(30f, 0f, 0f);
+
+            // Médio, anelar e mínimo firmemente fechados no punho
+            if (_rMiddleProx != null) _rMiddleProx.localRotation = Quaternion.Euler(55f, 0f, 0f);
+            if (_rRingProx != null) _rRingProx.localRotation = Quaternion.Euler(62f, 0f, 0f);
+            if (_rPinkyProx != null) _rPinkyProx.localRotation = Quaternion.Euler(68f, 0f, 0f);
+        }
+
+        private void ApplyLeftHandFingers()
+        {
+            // Polegar apoiado para cima (Thumps Forward Grip)
+            if (_lThumbProx != null) _lThumbProx.localRotation = Quaternion.Euler(-12f, 25f, 10f);
+
+            // Dedos esquerdos abraçando a frente dos dedos direitos
+            if (_lIndexProx != null) _lIndexProx.localRotation = Quaternion.Euler(48f, 0f, 0f);
+            if (_lMiddleProx != null) _lMiddleProx.localRotation = Quaternion.Euler(54f, 0f, 0f);
+            if (_lRingProx != null) _lRingProx.localRotation = Quaternion.Euler(60f, 0f, 0f);
+            if (_lPinkyProx != null) _lPinkyProx.localRotation = Quaternion.Euler(65f, 0f, 0f);
         }
 
         /// <summary>
         /// Solver Analítico Two-Bone Inverse Kinematics (Lei dos Cossenos com Hint Vector).
         /// </summary>
-        private void SolveTwoBoneIK(Transform shoulder, Transform elbow, Transform wrist, Transform hand,
+        private void SolveTwoBoneIK(Transform upper, Transform lower, Transform hand,
             Vector3 targetPos, Quaternion targetRot, Vector3 hintPos)
         {
-            Vector3 a = shoulder.position;
+            Vector3 a = upper.position;
             Vector3 c = targetPos;
             Vector3 ac = c - a;
-            float dist = Mathf.Clamp(ac.magnitude, 0.02f, upperArmLength + forearmLength - 0.002f);
+            float dist = Mathf.Clamp(ac.magnitude, 0.05f, upperArmLength + forearmLength - 0.002f);
 
-            // Lei dos cossenos para encontrar ângulos internos
+            // Lei dos cossenos
             float cosAngleA = (upperArmLength * upperArmLength + dist * dist - forearmLength * forearmLength) / (2f * upperArmLength * dist);
             float angleA = Mathf.Acos(Mathf.Clamp(cosAngleA, -1f, 1f));
 
-            // Plano formado por Shoulder, Target e Hint
+            // Vetor normal do plano do braço (Shoulder, Target, Hint)
             Vector3 hintDir = hintPos - a;
             Vector3 normal = Vector3.Cross(ac, hintDir).normalized;
             if (normal == Vector3.zero) normal = Vector3.up;
@@ -221,18 +289,24 @@ namespace IPSCSimulator.Player
             Vector3 armDir = Quaternion.AngleAxis(-angleA * Mathf.Rad2Deg, normal) * ac.normalized;
             Vector3 b = a + armDir * upperArmLength;
 
-            // Posiciona cotovelo
-            elbow.position = b;
-            wrist.position = c;
+            // Posicionamento e rotação dos membros
+            lower.position = b;
+            hand.position = c;
 
-            // Alinha rotação do braço superior
-            shoulder.rotation = Quaternion.LookRotation(b - a, normal);
-
-            // Alinha rotação do antebraço
-            elbow.rotation = Quaternion.LookRotation(c - b, normal);
-
-            // Alinha rotação final da mão ao alvo
+            upper.rotation = Quaternion.LookRotation(b - a, normal);
+            lower.rotation = Quaternion.LookRotation(c - b, normal);
             hand.rotation = targetRot;
+        }
+
+        private Transform FindBoneRecursive(Transform parent, string boneName)
+        {
+            if (parent.name.Equals(boneName, StringComparison.OrdinalIgnoreCase)) return parent;
+            for (int i = 0; i < parent.childCount; i++)
+            {
+                Transform found = FindBoneRecursive(parent.GetChild(i), boneName);
+                if (found != null) return found;
+            }
+            return null;
         }
     }
 }

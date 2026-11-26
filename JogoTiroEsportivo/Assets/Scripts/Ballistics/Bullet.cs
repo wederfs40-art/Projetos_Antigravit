@@ -50,13 +50,21 @@ namespace IPSCSimulator.Ballistics
             float stepDistance = displacement.magnitude;
             Vector3 stepDirection = displacement.normalized;
 
-            // 3. Detecção contínua por Raycast entre a posição anterior e a nova (anti-tunneling)
-            if (Physics.Raycast(_previousPosition, stepDirection, out RaycastHit hit, stepDistance, _hitLayers, QueryTriggerInteraction.Collide))
+            // 3. Detecção contínua por RaycastAll entre a posição anterior e a nova (anti-tunneling e ignora a arma do jogador)
+            RaycastHit[] hits = Physics.RaycastAll(_previousPosition, stepDirection, stepDistance, _hitLayers, QueryTriggerInteraction.Collide);
+            if (hits != null && hits.Length > 0)
             {
-                transform.position = hit.point;
-                ProcessDirectHit(hit, stepDirection, _decalPrefab);
-                Destroy(gameObject);
-                return;
+                System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+                foreach (RaycastHit h in hits)
+                {
+                    if (h.collider == null) continue;
+                    if (IsPlayerOrWeapon(h.collider)) continue;
+
+                    transform.position = h.point;
+                    ProcessDirectHit(h, stepDirection, _decalPrefab);
+                    Destroy(gameObject);
+                    return;
+                }
             }
 
             // 4. Sem colisão: atualiza a posição do objeto no espaço
@@ -70,13 +78,14 @@ namespace IPSCSimulator.Ballistics
         /// </summary>
         public static void ProcessDirectHit(RaycastHit hit, Vector3 bulletDirection, GameObject decalPrefab)
         {
-            if (hit.collider == null) return;
+            if (hit.collider == null || IsPlayerOrWeapon(hit.collider)) return;
 
             // 1. Transferência de energia cinética: empurra objetos com Rigidbody (barris, caixas, etc)
             Rigidbody hitRb = hit.collider.attachedRigidbody;
             if (hitRb != null && !hitRb.isKinematic)
             {
-                hitRb.AddForceAtPosition(bulletDirection.normalized * 380f, hit.point, ForceMode.Impulse);
+                hitRb.AddForceAtPosition(bulletDirection.normalized * 550f, hit.point, ForceMode.Impulse);
+                hitRb.AddTorque(Vector3.Cross(bulletDirection.normalized, Vector3.up) * 120f, ForceMode.Impulse);
             }
 
             // 2. Processa colisão com alvos de papelão IPSC
@@ -142,6 +151,18 @@ namespace IPSCSimulator.Ballistics
             sparkObj.GetComponent<MeshRenderer>().material = sparkMat;
             Destroy(sparkObj.GetComponent<Collider>());
             Destroy(sparkObj, 0.045f);
+        }
+        public static bool IsPlayerOrWeapon(Collider col)
+        {
+            if (col == null) return false;
+            if (col.CompareTag("Player") || col.CompareTag("MainCamera")) return true;
+            if (col.GetComponentInParent<CharacterController>() != null) return true;
+            if (col.GetComponentInParent<IPSCSimulator.Player.PlayerController>() != null) return true;
+            if (col.GetComponentInParent<IPSCSimulator.Weapons.Weapon>() != null) return true;
+            if (col.GetComponentInParent<IPSCSimulator.Weapons.WeaponHandling>() != null) return true;
+            if (col.GetComponentInParent<IPSCSimulator.Weapons.ProceduralViewmodelMotion>() != null) return true;
+            if (col.GetComponentInParent<IPSCSimulator.Player.TacticalViewmodelArms>() != null) return true;
+            return false;
         }
     }
 }

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -23,6 +23,15 @@ namespace IPSCSimulator.Setup
     /// </summary>
     public static class SceneGeneratorCore
     {
+        public static void SafeDestroy(Object obj)
+        {
+            if (obj == null) return;
+            if (Application.isPlaying)
+                Object.Destroy(obj);
+            else
+                Object.DestroyImmediate(obj);
+        }
+
         public static void GenerateCompleteShootingRange()
         {
             BuildSelectedEnvironment(GameEnvironmentType.IPSC_Outdoor_Short, SelectedWeaponType.Pistol_9mm);
@@ -34,7 +43,7 @@ namespace IPSCSimulator.Setup
 
             // 1. Limpeza de ambiente anterior
             GameObject oldRoot = GameObject.Find("--- IPSC SHOOTING RANGE ---");
-            if (oldRoot != null) Object.DestroyImmediate(oldRoot);
+            if (oldRoot != null) SafeDestroy(oldRoot);
 
             GameObject root = new GameObject("--- IPSC SHOOTING RANGE ---");
 
@@ -117,33 +126,37 @@ namespace IPSCSimulator.Setup
         {
             SetupSunLighting(true);
 
-            Material matGround = CreateGravelMaterial();
-            Material matWood = CreateWoodMaterial();
+            Material matGround = PBRMaterialFactory.CreateRealisticShootRangeGroundPBRMaterial();
+            Material matWood = PBRMaterialFactory.CreatePlywoodShootHousePBRMaterial();
             Material matBerm = CreateBermMaterial();
             Material matHazard = CreateHazardMaterial();
             Material matBarrelBlue = CreateBarrelMaterial(new Color(0.12f, 0.35f, 0.75f));
             Material matBarrelYellow = CreateBarrelMaterial(new Color(0.85f, 0.70f, 0.12f));
-            Material matSteel = CreateSteelMaterial();
+            Material matSteel = PBRMaterialFactory.CreateGunSteelPBRMaterial(new Color(0.85f, 0.85f, 0.88f));
 
             GameObject env = new GameObject("Environment_IPSC_Short");
             env.transform.SetParent(root);
 
-            // Chão e Para-balas
+            // Chão e Para-balas com Materiais PBR de Alta Fidelidade
             CreateFloor(env.transform, new Vector3(0, -0.25f, 10f), new Vector3(18f, 0.5f, 26f), matGround);
             CreateBerm(env.transform, new Vector3(0, 2.5f, 22f), new Vector3(20f, 5.5f, 4f), matBerm);
-            CreateWall(env.transform, new Vector3(-8.5f, 1.8f, 10f), new Vector3(1f, 4f, 26f), matWood);
-            CreateWall(env.transform, new Vector3(8.5f, 1.8f, 10f), new Vector3(1f, 4f, 26f), matWood);
 
-            // Shooting Box
+            // Paredes táticas da baía com montantes verticais (Framing Studs) inspiradas em Shoot House de Bodycam
+            CreateWallWithFraming(env.transform, new Vector3(-8.5f, 1.8f, 10f), new Vector3(0.15f, 3.8f, 24f), matWood);
+            CreateWallWithFraming(env.transform, new Vector3(8.5f, 1.8f, 10f), new Vector3(0.15f, 3.8f, 24f), matWood);
+
+            // Vigas de telhado (Roof Rafters) que projetam sombras lineares realistas na pista
+            CreateRoofRafters(env.transform, 10f, 24f, 3.8f, matWood);
+
+            // Shooting Box regulamentar
             CreateShootingBox(env.transform, Vector3.zero, matHazard);
 
-            // Barris táticos e Mesa de Apoio
-            CreateBarrel(env.transform, new Vector3(-1.8f, 0.45f, 3.5f), matBarrelBlue);
-            CreateBarrel(env.transform, new Vector3(-1.8f, 1.35f, 3.5f), matBarrelBlue);
-            CreateBarrel(env.transform, new Vector3(2.2f, 0.45f, 4.5f), matBarrelYellow);
+            // Coberturas táticas com caixas 3D realistas e barris dinâmicos
+            CreateTacticalCover(env.transform, new Vector3(-1.8f, 0f, 3.5f), matWood, matBarrelBlue);
+            CreateTacticalCover(env.transform, new Vector3(2.2f, 0f, 4.5f), matWood, matBarrelYellow);
             CreateShootingBench(env.transform, new Vector3(-3f, 0, 0.5f), matWood);
 
-            // Alvos: 3 Papelão + 2 Poppers
+            // Alvos: 3 Papelão IPSC regulamentares + 2 Steel Poppers reativos
             targets.Add(CreateIPSCTarget(root, "Target_01 (7m)", new Vector3(0f, 1.4f, 7f), false, matWood));
             targets.Add(CreateIPSCTarget(root, "Target_02 (11m)", new Vector3(-3.5f, 1.4f, 11f), false, matWood));
             targets.Add(CreateIPSCTarget(root, "NoShoot_01", new Vector3(-2.8f, 1.35f, 10.6f), true, matWood));
@@ -160,21 +173,22 @@ namespace IPSCSimulator.Setup
         {
             SetupSunLighting(true);
 
-            Material matGround = CreateGravelMaterial();
-            Material matWood = CreateWoodMaterial();
+            Material matGround = PBRMaterialFactory.CreateRealisticShootRangeGroundPBRMaterial();
+            Material matWood = PBRMaterialFactory.CreatePlywoodShootHousePBRMaterial();
             Material matBerm = CreateBermMaterial();
             Material matHazard = CreateHazardMaterial();
             Material matBarrelBlue = CreateBarrelMaterial(new Color(0.12f, 0.35f, 0.75f));
             Material matBarrelYellow = CreateBarrelMaterial(new Color(0.85f, 0.70f, 0.12f));
-            Material matSteel = CreateSteelMaterial();
+            Material matSteel = PBRMaterialFactory.CreateGunSteelPBRMaterial(new Color(0.85f, 0.85f, 0.88f));
 
             GameObject env = new GameObject("Environment_IPSC_Medium");
             env.transform.SetParent(root);
 
             CreateFloor(env.transform, new Vector3(0, -0.25f, 14f), new Vector3(22f, 0.5f, 34f), matGround);
             CreateBerm(env.transform, new Vector3(0, 3f, 30f), new Vector3(24f, 6f, 5f), matBerm);
-            CreateWall(env.transform, new Vector3(-10.5f, 2f, 14f), new Vector3(1f, 4f, 34f), matWood);
-            CreateWall(env.transform, new Vector3(10.5f, 2f, 14f), new Vector3(1f, 4f, 34f), matWood);
+            CreateWallWithFraming(env.transform, new Vector3(-10.5f, 2f, 14f), new Vector3(0.15f, 4f, 34f), matWood);
+            CreateWallWithFraming(env.transform, new Vector3(10.5f, 2f, 14f), new Vector3(0.15f, 4f, 34f), matWood);
+            CreateRoofRafters(env.transform, 14f, 32f, 4.0f, matWood);
 
             // Boxes de Tiro 1 e 2 (o atirador se desloca)
             CreateShootingBox(env.transform, Vector3.zero, matHazard);
@@ -342,7 +356,7 @@ namespace IPSCSimulator.Setup
             line.transform.position = new Vector3(0, 0.01f, z);
             line.transform.localScale = new Vector3(12f, 0.02f, 0.15f);
             line.GetComponent<MeshRenderer>().material = mat;
-            Object.DestroyImmediate(line.GetComponent<Collider>());
+            SafeDestroy(line.GetComponent<Collider>());
         }
 
         // =========================================================================
@@ -537,7 +551,7 @@ namespace IPSCSimulator.Setup
             topPlate.transform.localPosition = new Vector3(0, scale.y * 0.5f + 0.04f, 0);
             topPlate.transform.localScale = new Vector3(scale.x > scale.z ? scale.x : 0.16f, 0.08f, scale.z > scale.x ? scale.z : 0.16f);
             topPlate.GetComponent<MeshRenderer>().material = matStud;
-            Object.DestroyImmediate(topPlate.GetComponent<Collider>());
+            SafeDestroy(topPlate.GetComponent<Collider>());
         }
 
         private static void CreateRoofTruss(Transform parent, Vector3 pos, float spanWidth, Material matTruss)
@@ -552,7 +566,7 @@ namespace IPSCSimulator.Setup
             bottomBeam.transform.localPosition = Vector3.zero;
             bottomBeam.transform.localScale = new Vector3(spanWidth, 0.15f, 0.15f);
             bottomBeam.GetComponent<MeshRenderer>().material = matTruss;
-            Object.DestroyImmediate(bottomBeam.GetComponent<Collider>());
+            SafeDestroy(bottomBeam.GetComponent<Collider>());
 
             // Viga angular esquerda
             GameObject leftSlope = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -561,7 +575,7 @@ namespace IPSCSimulator.Setup
             leftSlope.transform.localScale = new Vector3(spanWidth * 0.55f, 0.12f, 0.12f);
             leftSlope.transform.localRotation = Quaternion.Euler(0, 0, 12f);
             leftSlope.GetComponent<MeshRenderer>().material = matTruss;
-            Object.DestroyImmediate(leftSlope.GetComponent<Collider>());
+            SafeDestroy(leftSlope.GetComponent<Collider>());
 
             // Viga angular direita
             GameObject rightSlope = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -570,7 +584,7 @@ namespace IPSCSimulator.Setup
             rightSlope.transform.localScale = new Vector3(spanWidth * 0.55f, 0.12f, 0.12f);
             rightSlope.transform.localRotation = Quaternion.Euler(0, 0, -12f);
             rightSlope.GetComponent<MeshRenderer>().material = matTruss;
-            Object.DestroyImmediate(rightSlope.GetComponent<Collider>());
+            SafeDestroy(rightSlope.GetComponent<Collider>());
         }
 
         private static void CreateHangingLight(Transform parent, Vector3 pos)
@@ -585,7 +599,7 @@ namespace IPSCSimulator.Setup
             wire.transform.localPosition = new Vector3(0, 0.4f, 0);
             wire.transform.localScale = new Vector3(0.015f, 0.4f, 0.015f);
             wire.GetComponent<MeshRenderer>().material = ProceduralMaterials.CreateMaterial(Color.black, "Mat_Wire");
-            Object.DestroyImmediate(wire.GetComponent<Collider>());
+            SafeDestroy(wire.GetComponent<Collider>());
 
             // Calha fluorescente emissiva
             GameObject fixture = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -593,7 +607,7 @@ namespace IPSCSimulator.Setup
             fixture.transform.localPosition = Vector3.zero;
             fixture.transform.localScale = new Vector3(1.4f, 0.08f, 0.25f);
             fixture.GetComponent<MeshRenderer>().material = ProceduralMaterials.CreateEmissiveMaterial(new Color(1f, 0.98f, 0.92f), "Mat_Fluorescent_Tube", 3.0f);
-            Object.DestroyImmediate(fixture.GetComponent<Collider>());
+            SafeDestroy(fixture.GetComponent<Collider>());
 
             // Luz pontual para iluminar o corredor
             Light pl = lightObj.AddComponent<Light>();
@@ -656,10 +670,10 @@ namespace IPSCSimulator.Setup
 
             SetFieldValue(controller, "playerCameraTransform", camObj.transform);
 
-            // Suporte da Arma
+            // Suporte da Arma (calibrado para visão FPS tática centralizada e imersiva)
             GameObject holder = new GameObject("WeaponHolder");
             holder.transform.SetParent(camObj.transform);
-            holder.transform.localPosition = new Vector3(0.18f, -0.22f, 0.42f);
+            holder.transform.localPosition = new Vector3(0.085f, -0.125f, 0.30f);
 
             WeaponHandling handling = holder.AddComponent<WeaponHandling>();
 
@@ -735,7 +749,7 @@ namespace IPSCSimulator.Setup
                     // Remove eventuais colliders para não colidir com o jogador
                     foreach (Collider col in modelInstance.GetComponentsInChildren<Collider>())
                     {
-                        Object.DestroyImmediate(col);
+                        SafeDestroy(col);
                     }
                 }
             }
@@ -752,12 +766,12 @@ namespace IPSCSimulator.Setup
                         velocity = 380f;
                         isAuto = false;
                         recoilMult = 1.0f;
-                        modelInstance.transform.localPosition = new Vector3(0f, -0.045f, 0.16f);
+                        modelInstance.transform.localPosition = Vector3.zero;
                         modelInstance.transform.localRotation = Quaternion.identity;
                         modelInstance.transform.localScale = Vector3.one;
-                        muzzleObj.transform.localPosition = new Vector3(0f, 0.015f, 0.35f);
-                        adsPos = new Vector3(0f, -0.038f, 0.28f);
-                        hipPos = new Vector3(0.18f, -0.19f, 0.38f);
+                        muzzleObj.transform.localPosition = new Vector3(0f, 0.028f, 0.22f);
+                        adsPos = new Vector3(0f, -0.076f, 0.24f);
+                        hipPos = new Vector3(0.085f, -0.125f, 0.30f);
                         slideObj = FindChildRecursive(modelInstance.transform, "Slide", "Pistol_A_Bolt");
                         magObj = FindChildRecursive(modelInstance.transform, "Magazine", "Pistol_A_Mag");
                         break;
@@ -767,12 +781,12 @@ namespace IPSCSimulator.Setup
                         velocity = 450f;
                         isAuto = false;
                         recoilMult = 1.8f;
-                        modelInstance.transform.localPosition = new Vector3(0f, -0.06f, 0.18f);
+                        modelInstance.transform.localPosition = Vector3.zero;
                         modelInstance.transform.localRotation = Quaternion.identity;
-                        modelInstance.transform.localScale = Vector3.one * 0.9f;
-                        muzzleObj.transform.localPosition = new Vector3(0f, 0.025f, 0.42f);
-                        adsPos = new Vector3(0f, -0.046f, 0.30f);
-                        hipPos = new Vector3(0.18f, -0.20f, 0.40f);
+                        modelInstance.transform.localScale = Vector3.one * 0.95f;
+                        muzzleObj.transform.localPosition = new Vector3(0f, 0.035f, 0.28f);
+                        adsPos = new Vector3(0f, -0.082f, 0.24f);
+                        hipPos = new Vector3(0.085f, -0.130f, 0.30f);
                         slideObj = FindChildRecursive(modelInstance.transform, "DW_Hummer", "Hammer");
                         magObj = FindChildRecursive(modelInstance.transform, "DW_MagazineAssembly", "Cylinder", "Speedloader");
                         break;
@@ -782,12 +796,12 @@ namespace IPSCSimulator.Setup
                         velocity = 715f;
                         isAuto = true;
                         recoilMult = 1.25f;
-                        modelInstance.transform.localPosition = new Vector3(0f, -0.08f, 0.22f);
+                        modelInstance.transform.localPosition = Vector3.zero;
                         modelInstance.transform.localRotation = Quaternion.identity;
-                        modelInstance.transform.localScale = Vector3.one * 0.90f;
-                        muzzleObj.transform.localPosition = new Vector3(0f, 0.02f, 0.65f);
-                        adsPos = new Vector3(0f, -0.058f, 0.32f);
-                        hipPos = new Vector3(0.18f, -0.22f, 0.42f);
+                        modelInstance.transform.localScale = Vector3.one * 0.95f;
+                        muzzleObj.transform.localPosition = new Vector3(0f, 0.040f, 0.65f);
+                        adsPos = new Vector3(0f, -0.098f, 0.26f);
+                        hipPos = new Vector3(0.095f, -0.140f, 0.34f);
                         slideObj = FindChildRecursive(modelInstance.transform, "WPN_AKM_bolt_carrier", "SMG_F_Bolt", "Slide", "Bolt");
                         magObj = FindChildRecursive(modelInstance.transform, "WPN_AKM_magazine", "SMG_F_Mag", "Magazine", "Mag");
                         break;
@@ -928,7 +942,7 @@ namespace IPSCSimulator.Setup
             rightForearm.transform.localScale = new Vector3(0.075f, 0.20f, 0.075f);
             rightForearm.transform.localRotation = Quaternion.Euler(42f, -14f, 15f);
             rightForearm.GetComponent<MeshRenderer>().material = matSleeve;
-            Object.DestroyImmediate(rightForearm.GetComponent<Collider>());
+            SafeDestroy(rightForearm.GetComponent<Collider>());
 
             // Luva tática / Palma da mão direita envolvendo o cabo
             GameObject rightGloveBase = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -938,7 +952,7 @@ namespace IPSCSimulator.Setup
             rightGloveBase.transform.localScale = new Vector3(0.048f, 0.085f, 0.055f);
             rightGloveBase.transform.localRotation = Quaternion.Euler(15f, 0f, 0f);
             rightGloveBase.GetComponent<MeshRenderer>().material = matGlove;
-            Object.DestroyImmediate(rightGloveBase.GetComponent<Collider>());
+            SafeDestroy(rightGloveBase.GetComponent<Collider>());
 
             // Placa de proteção nos nós dos dedos (Knuckle Guard)
             GameObject rightKnuckle = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -947,7 +961,7 @@ namespace IPSCSimulator.Setup
             rightKnuckle.transform.localPosition = new Vector3(0.52f, 0.12f, 0f);
             rightKnuckle.transform.localScale = new Vector3(0.20f, 0.75f, 0.85f);
             rightKnuckle.GetComponent<MeshRenderer>().material = matArmorKnuckle;
-            Object.DestroyImmediate(rightKnuckle.GetComponent<Collider>());
+            SafeDestroy(rightKnuckle.GetComponent<Collider>());
 
             // Dedos envolvendo a empunhadura da arma
             for (int f = 0; f < 3; f++)
@@ -959,7 +973,7 @@ namespace IPSCSimulator.Setup
                 finger.transform.localScale = new Vector3(0.55f, 0.20f, 0.22f);
                 finger.transform.localRotation = Quaternion.Euler(0, -25f, 0);
                 finger.GetComponent<MeshRenderer>().material = matGlove;
-                Object.DestroyImmediate(finger.GetComponent<Collider>());
+                SafeDestroy(finger.GetComponent<Collider>());
             }
 
             // Dedo indicador tático no gatilho
@@ -970,7 +984,7 @@ namespace IPSCSimulator.Setup
             triggerFinger.transform.localScale = new Vector3(0.22f, 0.18f, 0.55f);
             triggerFinger.transform.localRotation = Quaternion.Euler(12f, -10f, 0);
             triggerFinger.GetComponent<MeshRenderer>().material = matGlove;
-            Object.DestroyImmediate(triggerFinger.GetComponent<Collider>());
+            SafeDestroy(triggerFinger.GetComponent<Collider>());
 
             // Polegar
             GameObject thumb = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -980,7 +994,7 @@ namespace IPSCSimulator.Setup
             thumb.transform.localScale = new Vector3(0.26f, 0.22f, 0.45f);
             thumb.transform.localRotation = Quaternion.Euler(-18f, 15f, 0);
             thumb.GetComponent<MeshRenderer>().material = matGlove;
-            Object.DestroyImmediate(thumb.GetComponent<Collider>());
+            SafeDestroy(thumb.GetComponent<Collider>());
 
             // ==========================================
             // BRAÇO E MÃO ESQUERDA (APOIO TÁTICO IPSC)
@@ -996,7 +1010,7 @@ namespace IPSCSimulator.Setup
             leftForearm.transform.localScale = new Vector3(0.075f, 0.22f, 0.075f);
             leftForearm.transform.localRotation = Quaternion.Euler(46f, 22f, -18f);
             leftForearm.GetComponent<MeshRenderer>().material = matSleeve;
-            Object.DestroyImmediate(leftForearm.GetComponent<Collider>());
+            SafeDestroy(leftForearm.GetComponent<Collider>());
 
             // Mão esquerda apoiando por baixo da mão direita (Two-handed grip IPSC)
             GameObject leftGloveBase = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -1006,7 +1020,7 @@ namespace IPSCSimulator.Setup
             leftGloveBase.transform.localScale = new Vector3(0.052f, 0.082f, 0.065f);
             leftGloveBase.transform.localRotation = Quaternion.Euler(22f, 18f, -10f);
             leftGloveBase.GetComponent<MeshRenderer>().material = matGlove;
-            Object.DestroyImmediate(leftGloveBase.GetComponent<Collider>());
+            SafeDestroy(leftGloveBase.GetComponent<Collider>());
 
             // Dedos da mão esquerda envolvendo a frente da empunhadura
             for (int f = 0; f < 3; f++)
@@ -1018,7 +1032,7 @@ namespace IPSCSimulator.Setup
                 fingerL.transform.localScale = new Vector3(0.48f, 0.20f, 0.22f);
                 fingerL.transform.localRotation = Quaternion.Euler(0, 30f, 0);
                 fingerL.GetComponent<MeshRenderer>().material = matGlove;
-                Object.DestroyImmediate(fingerL.GetComponent<Collider>());
+                SafeDestroy(fingerL.GetComponent<Collider>());
             }
         }
 
@@ -1032,7 +1046,7 @@ namespace IPSCSimulator.Setup
             grip.transform.localScale = new Vector3(0.028f, 0.12f, 0.046f);
             grip.transform.localRotation = Quaternion.Euler(18f, 0, 0);
             grip.GetComponent<MeshRenderer>().material = matMetal;
-            Object.DestroyImmediate(grip.GetComponent<Collider>());
+            SafeDestroy(grip.GetComponent<Collider>());
 
             // Guarda-mato e Gatilho
             GameObject guard = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -1040,7 +1054,7 @@ namespace IPSCSimulator.Setup
             guard.transform.localPosition = new Vector3(0f, -0.03f, 0.035f);
             guard.transform.localScale = new Vector3(0.018f, 0.035f, 0.045f);
             guard.GetComponent<MeshRenderer>().material = matMetal;
-            Object.DestroyImmediate(guard.GetComponent<Collider>());
+            SafeDestroy(guard.GetComponent<Collider>());
 
             // Ferrolho móvel
             GameObject slide = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -1049,7 +1063,7 @@ namespace IPSCSimulator.Setup
             slide.transform.localPosition = new Vector3(0f, 0.026f, 0.04f);
             slide.transform.localScale = new Vector3(0.031f, 0.028f, 0.18f);
             slide.GetComponent<MeshRenderer>().material = matSlide;
-            Object.DestroyImmediate(slide.GetComponent<Collider>());
+            SafeDestroy(slide.GetComponent<Collider>());
 
             // Miras com Fibra Ótica
             GameObject sightBlade = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -1057,7 +1071,7 @@ namespace IPSCSimulator.Setup
             sightBlade.transform.localPosition = new Vector3(0f, 0.58f, 0.44f);
             sightBlade.transform.localScale = new Vector3(0.12f, 0.28f, 0.06f);
             sightBlade.GetComponent<MeshRenderer>().material = matMetal;
-            Object.DestroyImmediate(sightBlade.GetComponent<Collider>());
+            SafeDestroy(sightBlade.GetComponent<Collider>());
 
             GameObject fiber = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             fiber.transform.SetParent(sightBlade.transform);
@@ -1065,7 +1079,7 @@ namespace IPSCSimulator.Setup
             fiber.transform.localScale = new Vector3(0.4f, 0.7f, 0.4f);
             fiber.transform.localRotation = Quaternion.Euler(90f, 0, 0);
             fiber.GetComponent<MeshRenderer>().material = matFiber;
-            Object.DestroyImmediate(fiber.GetComponent<Collider>());
+            SafeDestroy(fiber.GetComponent<Collider>());
 
             muzzle.localPosition = new Vector3(0f, 0.022f, 0.145f);
             return slide.transform;
@@ -1082,7 +1096,7 @@ namespace IPSCSimulator.Setup
             grip.transform.localScale = new Vector3(0.030f, 0.13f, 0.052f);
             grip.transform.localRotation = Quaternion.Euler(22f, 0, 0);
             grip.GetComponent<MeshRenderer>().material = matRevolverWood;
-            Object.DestroyImmediate(grip.GetComponent<Collider>());
+            SafeDestroy(grip.GetComponent<Collider>());
 
             // Armação de Aço Inox
             GameObject frame = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -1091,7 +1105,7 @@ namespace IPSCSimulator.Setup
             frame.transform.localPosition = new Vector3(0f, 0.01f, 0.01f);
             frame.transform.localScale = new Vector3(0.032f, 0.045f, 0.08f);
             frame.GetComponent<MeshRenderer>().material = matSlide;
-            Object.DestroyImmediate(frame.GetComponent<Collider>());
+            SafeDestroy(frame.GetComponent<Collider>());
 
             // Tambor Cilindrico Rotativo (.357 Magnum)
             GameObject cylinder = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
@@ -1101,7 +1115,7 @@ namespace IPSCSimulator.Setup
             cylinder.transform.localScale = new Vector3(0.042f, 0.035f, 0.042f);
             cylinder.transform.localRotation = Quaternion.Euler(90f, 0, 0);
             cylinder.GetComponent<MeshRenderer>().material = matMetal;
-            Object.DestroyImmediate(cylinder.GetComponent<Collider>());
+            SafeDestroy(cylinder.GetComponent<Collider>());
 
             // Cano Longo de 6 polegadas (Dan Wesson Barrel)
             GameObject barrel = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -1110,7 +1124,7 @@ namespace IPSCSimulator.Setup
             barrel.transform.localPosition = new Vector3(0f, 0.022f, 0.13f);
             barrel.transform.localScale = new Vector3(0.024f, 0.032f, 0.16f);
             barrel.GetComponent<MeshRenderer>().material = matSlide;
-            Object.DestroyImmediate(barrel.GetComponent<Collider>());
+            SafeDestroy(barrel.GetComponent<Collider>());
 
             // Massa de mira alta
             GameObject sight = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -1118,7 +1132,7 @@ namespace IPSCSimulator.Setup
             sight.transform.localPosition = new Vector3(0f, 0.65f, 0.45f);
             sight.transform.localScale = new Vector3(0.15f, 0.35f, 0.08f);
             sight.GetComponent<MeshRenderer>().material = matFiber;
-            Object.DestroyImmediate(sight.GetComponent<Collider>());
+            SafeDestroy(sight.GetComponent<Collider>());
 
             muzzle.localPosition = new Vector3(0f, 0.022f, 0.22f);
             return barrel.transform;
@@ -1133,7 +1147,7 @@ namespace IPSCSimulator.Setup
             body.transform.localPosition = new Vector3(0f, 0.02f, 0.08f);
             body.transform.localScale = new Vector3(0.038f, 0.055f, 0.26f);
             body.GetComponent<MeshRenderer>().material = matMetal;
-            Object.DestroyImmediate(body.GetComponent<Collider>());
+            SafeDestroy(body.GetComponent<Collider>());
 
             // Empunhadura
             GameObject grip = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -1142,7 +1156,7 @@ namespace IPSCSimulator.Setup
             grip.transform.localScale = new Vector3(0.028f, 0.12f, 0.045f);
             grip.transform.localRotation = Quaternion.Euler(15f, 0, 0);
             grip.GetComponent<MeshRenderer>().material = matMetal;
-            Object.DestroyImmediate(grip.GetComponent<Collider>());
+            SafeDestroy(grip.GetComponent<Collider>());
 
             // Carregador Curvo Longo de 30 tiros
             GameObject mag = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -1151,7 +1165,7 @@ namespace IPSCSimulator.Setup
             mag.transform.localScale = new Vector3(0.024f, 0.16f, 0.035f);
             mag.transform.localRotation = Quaternion.Euler(-12f, 0, 0);
             mag.GetComponent<MeshRenderer>().material = matSlide;
-            Object.DestroyImmediate(mag.GetComponent<Collider>());
+            SafeDestroy(mag.GetComponent<Collider>());
 
             // Cano e Quebra-Chamas
             GameObject barrel = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
@@ -1160,7 +1174,7 @@ namespace IPSCSimulator.Setup
             barrel.transform.localScale = new Vector3(0.018f, 0.06f, 0.018f);
             barrel.transform.localRotation = Quaternion.Euler(90f, 0, 0);
             barrel.GetComponent<MeshRenderer>().material = matMetal;
-            Object.DestroyImmediate(barrel.GetComponent<Collider>());
+            SafeDestroy(barrel.GetComponent<Collider>());
 
             muzzle.localPosition = new Vector3(0f, 0.025f, 0.31f);
             return body.transform;
@@ -1171,12 +1185,21 @@ namespace IPSCSimulator.Setup
         // =========================================================================
         private static void SetupSunLighting(bool warm)
         {
-            CinematicLightingSetup.ApplyCinematicLighting(null, new Vector3(42f, -38f, 0f), warm ? 1.35f : 1.15f);
+            CinematicLightingSetup.ApplyCinematicLighting(null, new Vector3(38f, 45f, 0f), warm ? 1.35f : 1.15f);
+
+#if UNITY_EDITOR
+            Material skyMat = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(
+                "Assets/Starter Assets/Sample/Environment/Art/Skybox/SkyboxLiteWarm.mat");
+            if (skyMat != null)
+            {
+                RenderSettings.skybox = skyMat;
+            }
+#endif
 
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Exponential;
-            RenderSettings.fogDensity = 0.007f;
-            RenderSettings.fogColor = new Color(0.76f, 0.82f, 0.88f);
+            RenderSettings.fogDensity = 0.0035f;
+            RenderSettings.fogColor = new Color(0.85f, 0.88f, 0.92f);
         }
 
         private static void SetupIndoorLighting()
@@ -1309,6 +1332,88 @@ namespace IPSCSimulator.Setup
             wall.GetComponent<MeshRenderer>().material = mat;
         }
 
+        private static void CreateWallWithFraming(Transform parent, Vector3 pos, Vector3 size, Material matWood)
+        {
+            // Painel central de compensado naval / OSB
+            GameObject wallObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            wallObj.name = "Tactical_ShootHouse_Wall";
+            wallObj.transform.SetParent(parent);
+            wallObj.transform.position = pos;
+            wallObj.transform.localScale = size;
+            wallObj.GetComponent<MeshRenderer>().material = matWood;
+
+            // Montantes verticais de reforço (Studs 2x4) espaçados para gerar sombras e relevo arquitetônico realista
+            float halfLength = size.z * 0.5f;
+            float step = 2.0f;
+            Material studMat = ProceduralMaterials.CreateMaterial(new Color(0.48f, 0.35f, 0.22f), "Mat_WallStud", 0.1f, 0.2f);
+
+            for (float z = -halfLength; z <= halfLength + 0.1f; z += step)
+            {
+                GameObject studIn = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                studIn.name = "Stud_Vertical";
+                studIn.transform.SetParent(parent);
+                float xOffset = (pos.x > 0) ? -0.12f : 0.12f;
+                studIn.transform.position = new Vector3(pos.x + xOffset, pos.y, pos.z + z);
+                studIn.transform.localScale = new Vector3(0.08f, size.y, 0.08f);
+                studIn.GetComponent<MeshRenderer>().material = studMat;
+                SafeDestroy(studIn.GetComponent<Collider>());
+            }
+        }
+
+        private static void CreateRoofRafters(Transform parent, float centerZ, float length, float heightY, Material matWood)
+        {
+            GameObject raftersRoot = new GameObject("Roof_Trusses_Rafters");
+            raftersRoot.transform.SetParent(parent);
+
+            float halfLen = length * 0.5f;
+            for (float z = centerZ - halfLen; z <= centerZ + halfLen; z += 3.5f)
+            {
+                GameObject beam = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                beam.name = "Rafter_CrossBeam";
+                beam.transform.SetParent(raftersRoot.transform);
+                beam.transform.position = new Vector3(0f, heightY, z);
+                beam.transform.localScale = new Vector3(17.2f, 0.18f, 0.15f);
+                beam.GetComponent<MeshRenderer>().material = matWood;
+                SafeDestroy(beam.GetComponent<Collider>());
+            }
+        }
+
+        private static void CreateTacticalCover(Transform parent, Vector3 pos, Material matWood, Material matBarrel)
+        {
+            GameObject coverRoot = new GameObject("Tactical_Cover_Station");
+            coverRoot.transform.SetParent(parent);
+            coverRoot.transform.position = pos;
+
+            GameObject cratePrefab = null;
+#if UNITY_EDITOR
+            cratePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/Starter Assets/Sample/Environment/Prefabs/Box_350x250x200_Prefab.prefab");
+            if (cratePrefab == null)
+            {
+                cratePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                    "Assets/Starter Assets/Sample/Environment/Prefabs/Box_100x100x100_Prefab.prefab");
+            }
+#endif
+
+            if (cratePrefab != null)
+            {
+                GameObject crateInstance = Object.Instantiate(cratePrefab, coverRoot.transform);
+                crateInstance.transform.localPosition = Vector3.zero;
+                crateInstance.transform.localRotation = Quaternion.Euler(0, UnityEngine.Random.Range(-15f, 15f), 0);
+                crateInstance.transform.localScale = Vector3.one * 0.85f;
+            }
+            else
+            {
+                GameObject crateObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                crateObj.transform.SetParent(coverRoot.transform);
+                crateObj.transform.localPosition = new Vector3(0, 0.6f, 0);
+                crateObj.transform.localScale = new Vector3(1.2f, 1.2f, 1.2f);
+                crateObj.GetComponent<MeshRenderer>().material = matWood;
+            }
+
+            CreateBarrel(coverRoot.transform, new Vector3(1.1f, 0.45f, 0.2f), matBarrel);
+        }
+
         private static void CreateBarricade(Transform parent, Vector3 pos, Vector3 scale, Material mat)
         {
             GameObject barricade = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -1356,7 +1461,7 @@ namespace IPSCSimulator.Setup
             rip.transform.localPosition = pos;
             rip.transform.localScale = scale;
             rip.GetComponent<MeshRenderer>().material = mat;
-            Object.DestroyImmediate(rip.GetComponent<Collider>());
+            SafeDestroy(rip.GetComponent<Collider>());
         }
 
         private static void CreateShootingBench(Transform parent, Vector3 pos, Material woodMat)
@@ -1426,7 +1531,7 @@ namespace IPSCSimulator.Setup
             decalMat.renderQueue = 3000;
 
             decal.GetComponent<MeshRenderer>().material = decalMat;
-            Object.DestroyImmediate(decal.GetComponent<Collider>());
+            SafeDestroy(decal.GetComponent<Collider>());
             return decal;
         }
 
@@ -1438,7 +1543,7 @@ namespace IPSCSimulator.Setup
 
             Material bulletMat = ProceduralMaterials.CreateMaterial(new Color(0.95f, 0.85f, 0.35f), "Mat_Bullet_Brass", 0.9f, 0.95f);
             bullet.GetComponent<MeshRenderer>().material = bulletMat;
-            Object.DestroyImmediate(bullet.GetComponent<Collider>());
+            SafeDestroy(bullet.GetComponent<Collider>());
 
             bullet.AddComponent<Bullet>();
             return bullet;
@@ -1477,7 +1582,7 @@ namespace IPSCSimulator.Setup
             Material targetMat = ProceduralMaterials.CreateMaterial(Color.white, isNoShoot ? "Mat_TargetNoShoot" : "Mat_TargetIPSC", 0.1f);
             targetMat.mainTexture = ProceduralMaterials.CreateIPSCTargetTexture(isNoShoot);
             board.GetComponent<MeshRenderer>().material = targetMat;
-            Object.DestroyImmediate(board.GetComponent<Collider>());
+            SafeDestroy(board.GetComponent<Collider>());
 
             // Zonas Alpha, Charlie e Delta
             CreateTargetZone(targetObj.transform, "Zone_Alpha", Vector3.zero, new Vector3(0.15f, 0.32f, 0.02f), isNoShoot ? IPSCZoneType.NoShoot : IPSCZoneType.Alpha, targetScript);
