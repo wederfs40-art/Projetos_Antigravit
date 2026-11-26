@@ -536,22 +536,45 @@ namespace IPSCSimulator.Setup
             wallGroup.transform.SetParent(parent);
             wallGroup.transform.position = pos;
 
-            // Painel central de madeira compensada OSB
+            // Painel central de madeira compensada OSB com escala proporcional de textura
             GameObject panel = GameObject.CreatePrimitive(PrimitiveType.Cube);
             panel.name = "OSB_Panel";
             panel.transform.SetParent(wallGroup.transform);
             panel.transform.localPosition = Vector3.zero;
             panel.transform.localScale = scale;
-            panel.GetComponent<MeshRenderer>().material = matPlywood;
 
-            // Vigas de madeira 2x4 no topo (Header plate)
+            Material instMat = new Material(matPlywood);
+            float length = scale.x > scale.z ? scale.x : scale.z;
+            bool alongX = scale.x > scale.z;
+            float tileX = Mathf.Max(1f, length / 1.2f);
+            float tileY = Mathf.Max(1f, scale.y / 2.4f);
+            instMat.mainTextureScale = new Vector2(tileX, tileY);
+            if (instMat.HasProperty("_BumpMap")) instMat.SetTextureScale("_BumpMap", new Vector2(tileX, tileY));
+            panel.GetComponent<MeshRenderer>().material = instMat;
+
+            // Viga superior de acabamento (Top Header Plate)
             GameObject topPlate = GameObject.CreatePrimitive(PrimitiveType.Cube);
             topPlate.name = "Stud_TopHeader";
             topPlate.transform.SetParent(wallGroup.transform);
             topPlate.transform.localPosition = new Vector3(0, scale.y * 0.5f + 0.04f, 0);
-            topPlate.transform.localScale = new Vector3(scale.x > scale.z ? scale.x : 0.16f, 0.08f, scale.z > scale.x ? scale.z : 0.16f);
+            topPlate.transform.localScale = new Vector3(alongX ? scale.x : 0.16f, 0.08f, alongX ? 0.16f : scale.z);
             topPlate.GetComponent<MeshRenderer>().material = matStud;
             SafeDestroy(topPlate.GetComponent<Collider>());
+
+            // Montantes verticais 2x4 (Framing Studs) a cada 1.2m criando profundidade e sombras lineares reais
+            int studCount = Mathf.Max(2, Mathf.RoundToInt(length / 1.2f) + 1);
+            for (int s = 0; s < studCount; s++)
+            {
+                float t = ((float)s / (studCount - 1)) - 0.5f;
+                GameObject stud = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                stud.name = $"Stud_2x4_{s}";
+                stud.transform.SetParent(wallGroup.transform);
+                Vector3 studLocalPos = alongX ? new Vector3(t * (length - 0.12f), 0, 0.07f) : new Vector3(0.07f, 0, t * (length - 0.12f));
+                stud.transform.localPosition = studLocalPos;
+                stud.transform.localScale = alongX ? new Vector3(0.06f, scale.y, 0.08f) : new Vector3(0.08f, scale.y, 0.06f);
+                stud.GetComponent<MeshRenderer>().material = matStud;
+                SafeDestroy(stud.GetComponent<Collider>());
+            }
         }
 
         private static void CreateRoofTruss(Transform parent, Vector3 pos, float spanWidth, Material matTruss)
@@ -632,8 +655,22 @@ namespace IPSCSimulator.Setup
             sun.transform.rotation = Quaternion.Euler(58f, -42f, 0f);
             sun.shadows = LightShadows.Soft;
 
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.22f, 0.23f, 0.26f);
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = new Color(0.42f, 0.45f, 0.50f);
+            RenderSettings.ambientEquatorColor = new Color(0.28f, 0.28f, 0.30f);
+            RenderSettings.ambientGroundColor = new Color(0.14f, 0.12f, 0.10f);
+
+            GameObject probeObj = GameObject.Find("Bodycam_Reflection_Probe");
+            if (probeObj == null)
+            {
+                probeObj = new GameObject("Bodycam_Reflection_Probe");
+                ReflectionProbe probe = probeObj.AddComponent<ReflectionProbe>();
+                probe.mode = UnityEngine.Rendering.ReflectionProbeMode.Realtime;
+                probe.refreshMode = UnityEngine.Rendering.ReflectionProbeRefreshMode.OnAwake;
+                probe.timeSlicingMode = UnityEngine.Rendering.ReflectionProbeTimeSlicingMode.AllFacesAtOnce;
+                probe.size = new Vector3(40f, 15f, 50f);
+                probeObj.transform.position = new Vector3(0, 3f, 15f);
+            }
         }
 
         // =========================================================================
@@ -682,6 +719,9 @@ namespace IPSCSimulator.Setup
             SetFieldValue(bodycam, "playerBody", player.transform);
             SetFieldValue(bodycam, "weaponHolder", holder.transform);
             SetFieldValue(bodycam, "cam", cam);
+
+            // Adiciona pós-processamento cinemático de lente Bodycam (Fisheye, ACES, Aberração Cromática e Granulação)
+            camObj.AddComponent<BodycamPostProcessing>();
 
             // Instancia ou constrói a arma selecionada
             AttachSelectedWeapon(holder, handling, bulletPrefab, decalPrefab, weaponType);
@@ -806,6 +846,35 @@ namespace IPSCSimulator.Setup
                         magObj = FindChildRecursive(modelInstance.transform, "WPN_AKM_magazine", "SMG_F_Mag", "Magazine", "Mag");
                         break;
                 }
+
+#if UNITY_EDITOR
+                if (weaponType == SelectedWeaponType.SMG_Tactical)
+                {
+                    Material akmMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Weapons_ChamferZone/AKM/Materials/WPNM_AKM.mat");
+                    Material calMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Weapons_ChamferZone/AKM/Materials/WPNM_calibers.mat");
+                    if (akmMat != null)
+                    {
+                        foreach (MeshRenderer mr in modelInstance.GetComponentsInChildren<MeshRenderer>())
+                        {
+                            if (mr.name.IndexOf("cal", System.StringComparison.OrdinalIgnoreCase) >= 0 || mr.name.IndexOf("7_62", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                                mr.sharedMaterial = calMat != null ? calMat : akmMat;
+                            else
+                                mr.sharedMaterial = akmMat;
+                        }
+                    }
+                }
+                else if (weaponType == SelectedWeaponType.Pistol_9mm)
+                {
+                    Material m9tMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/GILD/FA FPS Weapons - Free/FA M9T/Materials/Built-In/FA M9T (Black).mat");
+                    if (m9tMat != null)
+                    {
+                        foreach (MeshRenderer mr in modelInstance.GetComponentsInChildren<MeshRenderer>())
+                        {
+                            mr.sharedMaterial = m9tMat;
+                        }
+                    }
+                }
+#endif
             }
             else
             {
@@ -877,9 +946,9 @@ namespace IPSCSimulator.Setup
             if (cycles == null) cycles = holder.AddComponent<TacticalWeaponCycles>();
             cycles.BindTransforms(weapon, slideObj, magObj, motion);
 
-            // Rigging e Two-Bone IK de Braços Táticos Articulados com Materiais PBR
-            TacticalViewmodelArms arms = holder.transform.parent.GetComponentInChildren<TacticalViewmodelArms>();
-            if (arms == null) arms = holder.transform.parent.gameObject.AddComponent<TacticalViewmodelArms>();
+            // Braços e Luvas Táticas Militares em 1ª Pessoa com Postura Dinâmica de Empunhadura
+            TacticalViewmodelArms arms = holder.GetComponent<TacticalViewmodelArms>();
+            if (arms == null) arms = holder.AddComponent<TacticalViewmodelArms>();
             arms.InitializeArms(holder.transform,
                 PBRMaterialFactory.CreateTacticalCamoPBRMaterial(),
                 PBRMaterialFactory.CreateCombatGlovePBRMaterial(),
@@ -1310,7 +1379,13 @@ namespace IPSCSimulator.Setup
             ground.transform.SetParent(parent);
             ground.transform.position = pos;
             ground.transform.localScale = scale;
-            ground.GetComponent<MeshRenderer>().material = mat;
+
+            Material instMat = new Material(mat);
+            float tileX = Mathf.Max(1f, scale.x * 0.5f);
+            float tileZ = Mathf.Max(1f, scale.z * 0.5f);
+            instMat.mainTextureScale = new Vector2(tileX, tileZ);
+            if (instMat.HasProperty("_BumpMap")) instMat.SetTextureScale("_BumpMap", new Vector2(tileX, tileZ));
+            ground.GetComponent<MeshRenderer>().material = instMat;
         }
 
         private static void CreateBerm(Transform parent, Vector3 pos, Vector3 scale, Material mat)
@@ -1330,7 +1405,14 @@ namespace IPSCSimulator.Setup
             wall.transform.SetParent(parent);
             wall.transform.position = pos;
             wall.transform.localScale = scale;
-            wall.GetComponent<MeshRenderer>().material = mat;
+
+            Material instMat = new Material(mat);
+            float length = scale.x > scale.z ? scale.x : scale.z;
+            float tileX = Mathf.Max(1f, length * 0.4f);
+            float tileY = Mathf.Max(1f, scale.y * 0.4f);
+            instMat.mainTextureScale = new Vector2(tileX, tileY);
+            if (instMat.HasProperty("_BumpMap")) instMat.SetTextureScale("_BumpMap", new Vector2(tileX, tileY));
+            wall.GetComponent<MeshRenderer>().material = instMat;
         }
 
         private static void CreateWallWithFraming(Transform parent, Vector3 pos, Vector3 size, Material matWood)
