@@ -704,13 +704,24 @@ namespace IPSCSimulator.Setup
             switch (weaponType)
             {
                 case SelectedWeaponType.Pistol_9mm:
-                    prefabPath = "Assets/Low Poly Pistol Weapon Pack 1/Prefabs/Weapons/Pistol_A.prefab";
+                    // Prioriza a pistola tática fotorrealista FA M9T Beretta
+                    prefabPath = "Assets/GILD/FA FPS Weapons - Free/FA M9T/Prefabs/Built-In/FA M9T (Black).prefab";
+                    if (!System.IO.File.Exists(prefabPath))
+                        prefabPath = "Assets/Low Poly Pistol Weapon Pack 1/Prefabs/Weapons/Pistol_A.prefab";
                     break;
                 case SelectedWeaponType.Revolver_DanWesson:
+                    // Prioriza o revólver de alta fidelidade Dan Wesson 715
                     prefabPath = "Assets/3D Models/Props/Weapons/DWm715 FPS Model/Prefabs/DW_Set0.prefab";
+                    if (!System.IO.File.Exists(prefabPath))
+                        prefabPath = "Assets/GILD/FA FPS Weapons - Free/FA Superhawk/Prefabs/Built-In/FA Superhawk.prefab";
                     break;
                 case SelectedWeaponType.SMG_Tactical:
-                    prefabPath = "Assets/Low Poly SMG Weapon Pack 2/Prefabs/Weapons/SMG_F.prefab";
+                    // Prioriza o fuzil de assalto de ultra-fidelidade ChamferZone AKM
+                    prefabPath = "Assets/Weapons_ChamferZone/AKM/WPN_AKM.FBX";
+                    if (!System.IO.File.Exists(prefabPath))
+                        prefabPath = "Assets/GILD/FA FPS Weapons - Free/WF Strongarm/Prefabs/Built-In/WF Strongarm (Black).prefab";
+                    if (!System.IO.File.Exists(prefabPath))
+                        prefabPath = "Assets/Low Poly SMG Weapon Pack 2/Prefabs/Weapons/SMG_F.prefab";
                     break;
             }
 
@@ -730,6 +741,8 @@ namespace IPSCSimulator.Setup
             }
 #endif
 
+            Transform magObj = null;
+
             if (modelInstance != null)
             {
                 switch (weaponType)
@@ -745,7 +758,8 @@ namespace IPSCSimulator.Setup
                         muzzleObj.transform.localPosition = new Vector3(0f, 0.015f, 0.35f);
                         adsPos = new Vector3(0f, -0.038f, 0.28f);
                         hipPos = new Vector3(0.18f, -0.19f, 0.38f);
-                        slideObj = modelInstance.transform.Find("Pistol_A_Bolt");
+                        slideObj = FindChildRecursive(modelInstance.transform, "Slide", "Pistol_A_Bolt");
+                        magObj = FindChildRecursive(modelInstance.transform, "Magazine", "Pistol_A_Mag");
                         break;
 
                     case SelectedWeaponType.Revolver_DanWesson:
@@ -759,21 +773,23 @@ namespace IPSCSimulator.Setup
                         muzzleObj.transform.localPosition = new Vector3(0f, 0.025f, 0.42f);
                         adsPos = new Vector3(0f, -0.046f, 0.30f);
                         hipPos = new Vector3(0.18f, -0.20f, 0.40f);
-                        slideObj = modelInstance.transform.Find("DW_Hummer");
+                        slideObj = FindChildRecursive(modelInstance.transform, "DW_Hummer", "Hammer");
+                        magObj = FindChildRecursive(modelInstance.transform, "DW_MagazineAssembly", "Cylinder", "Speedloader");
                         break;
 
                     case SelectedWeaponType.SMG_Tactical:
                         capacity = 30;
-                        velocity = 410f;
+                        velocity = 715f;
                         isAuto = true;
-                        recoilMult = 0.85f;
-                        modelInstance.transform.localPosition = new Vector3(0f, -0.07f, 0.18f);
+                        recoilMult = 1.25f;
+                        modelInstance.transform.localPosition = new Vector3(0f, -0.08f, 0.22f);
                         modelInstance.transform.localRotation = Quaternion.identity;
-                        modelInstance.transform.localScale = Vector3.one * 0.95f;
-                        muzzleObj.transform.localPosition = new Vector3(0f, 0.01f, 0.50f);
-                        adsPos = new Vector3(0f, -0.052f, 0.28f);
+                        modelInstance.transform.localScale = Vector3.one * 0.90f;
+                        muzzleObj.transform.localPosition = new Vector3(0f, 0.02f, 0.65f);
+                        adsPos = new Vector3(0f, -0.058f, 0.32f);
                         hipPos = new Vector3(0.18f, -0.22f, 0.42f);
-                        slideObj = modelInstance.transform.Find("SMG_F_Bolt");
+                        slideObj = FindChildRecursive(modelInstance.transform, "WPN_AKM_bolt_carrier", "SMG_F_Bolt", "Slide", "Bolt");
+                        magObj = FindChildRecursive(modelInstance.transform, "WPN_AKM_magazine", "SMG_F_Mag", "Magazine", "Mag");
                         break;
                 }
             }
@@ -825,14 +841,7 @@ namespace IPSCSimulator.Setup
             SetFieldValue(weapon, "slideLockSound", ProceduralAudio.CreateSlideLockClip());
             SetFieldValue(weapon, "hitLayers", (LayerMask)(~0));
 
-            // Localiza e atribui o carregador para animação física de recarga
-            Transform magObj = null;
-            if (modelInstance != null)
-            {
-                if (weaponType == SelectedWeaponType.Pistol_9mm) magObj = modelInstance.transform.Find("Pistol_A_Mag");
-                else if (weaponType == SelectedWeaponType.SMG_Tactical) magObj = modelInstance.transform.Find("SMG_F_Mag");
-                else if (weaponType == SelectedWeaponType.Revolver_DanWesson) magObj = modelInstance.transform.Find("DW_MagazineAssembly");
-            }
+            // Atribui o carregador para animação física de recarga se encontrado
             if (magObj != null)
             {
                 SetFieldValue(weapon, "magazineTransform", magObj);
@@ -1497,6 +1506,29 @@ namespace IPSCSimulator.Setup
         {
             var field = target.GetType().GetField(fieldName, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
             if (field != null) field.SetValue(target, value);
+        }
+
+        private static Transform FindChildRecursive(Transform parent, params string[] targetNames)
+        {
+            if (parent == null) return null;
+            foreach (string name in targetNames)
+            {
+                Transform found = parent.Find(name);
+                if (found != null) return found;
+            }
+
+            for (int i = 0; i < parent.childCount; i++)
+            {
+                Transform child = parent.GetChild(i);
+                foreach (string name in targetNames)
+                {
+                    if (child.name.IndexOf(name, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                        return child;
+                }
+                Transform deep = FindChildRecursive(child, targetNames);
+                if (deep != null) return deep;
+            }
+            return null;
         }
     }
 }
