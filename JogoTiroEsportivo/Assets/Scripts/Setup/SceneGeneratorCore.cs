@@ -861,25 +861,38 @@ namespace IPSCSimulator.Setup
             string prefabPath = null;
             switch (weaponType)
             {
-                case SelectedWeaponType.Pistol_9mm:
-                    // Prioriza a pistola tática fotorrealista FA M9T Beretta
+                case SelectedWeaponType.Pistol_Beretta_M9T_Black:
                     prefabPath = "Assets/GILD/FA FPS Weapons - Free/FA M9T/Prefabs/Built-In/FA M9T (Black).prefab";
-                    if (!System.IO.File.Exists(prefabPath))
-                        prefabPath = "Assets/Low Poly Pistol Weapon Pack 1/Prefabs/Weapons/Pistol_A.prefab";
                     break;
-                case SelectedWeaponType.Revolver_DanWesson:
-                    // Prioriza o revólver de alta fidelidade Dan Wesson 715
+                case SelectedWeaponType.Pistol_Beretta_M9T_Tan:
+                    prefabPath = "Assets/GILD/FA FPS Weapons - Free/FA M9T/Prefabs/Built-In/FA M9T (Tan).prefab";
+                    break;
+                case SelectedWeaponType.Pistol_Tactical_Glock:
+                    prefabPath = "Assets/Low Poly Pistol Weapon Pack 1/Prefabs/Weapons/Pistol_A.prefab";
+                    break;
+                case SelectedWeaponType.Pistol_Combat_Custom:
+                    prefabPath = "Assets/Low Poly Pistol Weapon Pack 1/Prefabs/Weapons/Pistol_B.prefab";
+                    break;
+
+                case SelectedWeaponType.Revolver_DanWesson_357:
                     prefabPath = "Assets/3D Models/Props/Weapons/DWm715 FPS Model/Prefabs/DW_Set0.prefab";
-                    if (!System.IO.File.Exists(prefabPath))
-                        prefabPath = "Assets/GILD/FA FPS Weapons - Free/FA Superhawk/Prefabs/Built-In/FA Superhawk.prefab";
                     break;
-                case SelectedWeaponType.SMG_Tactical:
-                    // Prioriza o fuzil de assalto de ultra-fidelidade ChamferZone AKM
+                case SelectedWeaponType.Revolver_Superhawk_Tactical:
+                    prefabPath = "Assets/GILD/FA FPS Weapons - Free/FA Superhawk/Prefabs/Built-In/FA Superhawk.prefab";
+                    break;
+
+                case SelectedWeaponType.SMG_Strongarm_Tactical:
+                    prefabPath = "Assets/GILD/FA FPS Weapons - Free/WF Strongarm/Prefabs/Built-In/WF Strongarm (Black).prefab";
+                    break;
+                case SelectedWeaponType.SMG_MP_Vector:
+                    prefabPath = "Assets/Low Poly SMG Weapon Pack 2/Prefabs/Weapons/SMG_F.prefab";
+                    break;
+                case SelectedWeaponType.SMG_P90_Compact:
+                    prefabPath = "Assets/Low Poly SMG Weapon Pack 2/Prefabs/Weapons/SMG_G.prefab";
+                    break;
+
+                case SelectedWeaponType.Rifle_AKM_Tactical:
                     prefabPath = "Assets/Weapons_ChamferZone/AKM/WPN_AKM.FBX";
-                    if (!System.IO.File.Exists(prefabPath))
-                        prefabPath = "Assets/GILD/FA FPS Weapons - Free/WF Strongarm/Prefabs/Built-In/WF Strongarm (Black).prefab";
-                    if (!System.IO.File.Exists(prefabPath))
-                        prefabPath = "Assets/Low Poly SMG Weapon Pack 2/Prefabs/Weapons/SMG_F.prefab";
                     break;
             }
 
@@ -905,7 +918,8 @@ namespace IPSCSimulator.Setup
             {
                 switch (weaponType)
                 {
-                    case SelectedWeaponType.Pistol_9mm:
+                    case SelectedWeaponType.Pistol_Beretta_M9T_Black:
+                    case SelectedWeaponType.Pistol_Beretta_M9T_Tan:
                         capacity = 17;
                         velocity = 380f;
                         isAuto = false;
@@ -920,7 +934,37 @@ namespace IPSCSimulator.Setup
                         magObj = FindChildRecursive(modelInstance.transform, "Magazine", "Pistol_A_Mag");
                         break;
 
-                    case SelectedWeaponType.Revolver_DanWesson:
+                    case SelectedWeaponType.Pistol_Tactical_Glock:
+                        capacity = 17;
+                        velocity = 375f;
+                        isAuto = false;
+                        recoilMult = 0.95f;
+                        modelInstance.transform.localPosition = Vector3.zero;
+                        modelInstance.transform.localRotation = Quaternion.identity;
+                        modelInstance.transform.localScale = Vector3.one * 1.15f;
+                        muzzleObj.transform.localPosition = new Vector3(0f, 0.030f, 0.22f);
+                        adsPos = new Vector3(0f, -0.046f, 0.16f);
+                        hipPos = new Vector3(0.085f, -0.125f, 0.28f);
+                        slideObj = FindChildRecursive(modelInstance.transform, "Slide", "Pistol_A_Bolt");
+                        magObj = FindChildRecursive(modelInstance.transform, "Magazine", "Pistol_A_Mag");
+                        break;
+
+                    case SelectedWeaponType.Pistol_Combat_Custom:
+                        capacity = 15;
+                        velocity = 360f;
+                        isAuto = false;
+                        recoilMult = 1.15f;
+                        modelInstance.transform.localPosition = Vector3.zero;
+                        modelInstance.transform.localRotation = Quaternion.identity;
+                        modelInstance.transform.localScale = Vector3.one * 1.15f;
+                        muzzleObj.transform.localPosition = new Vector3(0f, 0.032f, 0.24f);
+                        adsPos = new Vector3(0f, -0.048f, 0.16f);
+                        hipPos = new Vector3(0.085f, -0.125f, 0.28f);
+                        slideObj = FindChildRecursive(modelInstance.transform, "Slide", "Pistol_B_Bolt");
+                        magObj = FindChildRecursive(modelInstance.transform, "Magazine", "Pistol_B_Mag");
+                        break;
+
+                    case SelectedWeaponType.Revolver_DanWesson_357:
                         capacity = 6;
                         velocity = 450f;
                         isAuto = false;
@@ -935,7 +979,67 @@ namespace IPSCSimulator.Setup
                         magObj = FindChildRecursive(modelInstance.transform, "DW_MagazineAssembly", "Cylinder", "Speedloader");
                         break;
 
-                    case SelectedWeaponType.SMG_Tactical:
+                    case SelectedWeaponType.Revolver_Superhawk_Tactical:
+                        capacity = 6;
+                        velocity = 480f;
+                        isAuto = false;
+                        recoilMult = 2.0f;
+                        modelInstance.transform.localPosition = Vector3.zero;
+                        modelInstance.transform.localRotation = Quaternion.identity;
+                        modelInstance.transform.localScale = Vector3.one;
+                        muzzleObj.transform.localPosition = new Vector3(0f, 0.038f, 0.32f);
+                        adsPos = new Vector3(0f, -0.052f, 0.17f);
+                        hipPos = new Vector3(0.085f, -0.130f, 0.28f);
+                        slideObj = FindChildRecursive(modelInstance.transform, "Hammer", "DW_Hummer");
+                        magObj = FindChildRecursive(modelInstance.transform, "Cylinder", "SH Speedloader");
+                        break;
+
+                    case SelectedWeaponType.SMG_Strongarm_Tactical:
+                        capacity = 30;
+                        velocity = 400f;
+                        isAuto = true;
+                        recoilMult = 0.9f;
+                        modelInstance.transform.localPosition = Vector3.zero;
+                        modelInstance.transform.localRotation = Quaternion.identity;
+                        modelInstance.transform.localScale = Vector3.one;
+                        muzzleObj.transform.localPosition = new Vector3(0f, 0.035f, 0.45f);
+                        adsPos = new Vector3(0f, -0.058f, 0.18f);
+                        hipPos = new Vector3(0.090f, -0.135f, 0.30f);
+                        slideObj = FindChildRecursive(modelInstance.transform, "Bolt", "Slide");
+                        magObj = FindChildRecursive(modelInstance.transform, "Magazine", "Mag");
+                        break;
+
+                    case SelectedWeaponType.SMG_MP_Vector:
+                        capacity = 30;
+                        velocity = 390f;
+                        isAuto = true;
+                        recoilMult = 0.85f;
+                        modelInstance.transform.localPosition = Vector3.zero;
+                        modelInstance.transform.localRotation = Quaternion.identity;
+                        modelInstance.transform.localScale = Vector3.one * 1.15f;
+                        muzzleObj.transform.localPosition = new Vector3(0f, 0.035f, 0.42f);
+                        adsPos = new Vector3(0f, -0.058f, 0.18f);
+                        hipPos = new Vector3(0.090f, -0.135f, 0.30f);
+                        slideObj = FindChildRecursive(modelInstance.transform, "SMG_F_Bolt", "Bolt", "Slide");
+                        magObj = FindChildRecursive(modelInstance.transform, "SMG_F_Mag", "Magazine", "Mag");
+                        break;
+
+                    case SelectedWeaponType.SMG_P90_Compact:
+                        capacity = 50;
+                        velocity = 715f;
+                        isAuto = true;
+                        recoilMult = 0.75f;
+                        modelInstance.transform.localPosition = Vector3.zero;
+                        modelInstance.transform.localRotation = Quaternion.identity;
+                        modelInstance.transform.localScale = Vector3.one * 1.15f;
+                        muzzleObj.transform.localPosition = new Vector3(0f, 0.030f, 0.40f);
+                        adsPos = new Vector3(0f, -0.055f, 0.17f);
+                        hipPos = new Vector3(0.090f, -0.135f, 0.30f);
+                        slideObj = FindChildRecursive(modelInstance.transform, "SMG_G_Bolt", "Bolt");
+                        magObj = FindChildRecursive(modelInstance.transform, "SMG_G_Mag", "Magazine");
+                        break;
+
+                    case SelectedWeaponType.Rifle_AKM_Tactical:
                         capacity = 30;
                         velocity = 715f;
                         isAuto = true;
@@ -1074,21 +1178,21 @@ namespace IPSCSimulator.Setup
             if (holder == null) return;
 
             WeaponHandling handling = holder.GetComponent<WeaponHandling>();
-            if (handling == null) return;
+            if (handling == null) handling = holder.AddComponent<WeaponHandling>();
 
             for (int i = holder.transform.childCount - 1; i >= 0; i--)
             {
-                Object.Destroy(holder.transform.GetChild(i).gameObject);
+                SafeDestroy(holder.transform.GetChild(i).gameObject);
             }
 
             GameObject rangeRoot = GameObject.Find("--- IPSC SHOOTING RANGE ---");
-            if (rangeRoot == null) return;
+            Transform bulletTrans = rangeRoot != null ? rangeRoot.transform.Find("Bullet_Prefab") : null;
+            Transform decalTrans = rangeRoot != null ? rangeRoot.transform.Find("Decal_BulletHole_Prefab") : null;
 
-            Transform bulletTrans = rangeRoot.transform.Find("Bullet_Prefab");
-            Transform decalTrans = rangeRoot.transform.Find("Decal_BulletHole_Prefab");
-            if (bulletTrans == null || decalTrans == null) return;
+            GameObject decalObj = decalTrans != null ? decalTrans.gameObject : CreateBulletHoleDecalObject();
+            GameObject bulletObj = bulletTrans != null ? bulletTrans.gameObject : CreateBulletPrefab(decalObj);
 
-            AttachSelectedWeapon(holder, handling, bulletTrans.gameObject, decalTrans.gameObject, newWeapon);
+            AttachSelectedWeapon(holder, handling, bulletObj, decalObj, newWeapon);
             Debug.Log($"[Arsenal] Arma equipada alterada para: {newWeapon}");
         }
 

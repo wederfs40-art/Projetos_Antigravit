@@ -25,7 +25,8 @@ namespace IPSCSimulator.UI
         private GUIStyle _infoBoxStyle;
 
         private GameEnvironmentType _tempEnv = GameEnvironmentType.Outdoor_Precision_Stand;
-        private SelectedWeaponType _tempWeapon = SelectedWeaponType.Pistol_9mm;
+        private SelectedWeaponType _tempWeapon = SelectedWeaponType.Pistol_Beretta_M9T_Black;
+        private WeaponCategory _selectedCategory = WeaponCategory.Pistols;
 
         private void Start()
         {
@@ -61,8 +62,8 @@ namespace IPSCSimulator.UI
             GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
             GUI.color = Color.white;
 
-            float panelWidth = Mathf.Min(860f, Screen.width - 40f);
-            float panelHeight = Mathf.Min(680f, Screen.height - 40f);
+            float panelWidth = Mathf.Min(920f, Screen.width - 40f);
+            float panelHeight = Mathf.Min(780f, Screen.height - 30f);
             float startX = (Screen.width - panelWidth) * 0.5f;
             float startY = (Screen.height - panelHeight) * 0.5f;
 
@@ -71,11 +72,11 @@ namespace IPSCSimulator.UI
             // Cabeçalho
             GUILayout.Label("TACTICAL SHOOTER & IPSC SIMULATOR", _titleStyle);
             GUILayout.Label("Selecione o Ambiente de Treino e seu Armamento para Iniciar", _subTitleStyle);
-            GUILayout.Space(15);
+            GUILayout.Space(10);
 
             // Seção 1: Seleção de Ambientes
             GUILayout.Label("1. SELECIONE O CENÁRIO / AMBIENTE:", _sectionHeaderStyle);
-            GUILayout.Space(5);
+            GUILayout.Space(4);
 
             DrawEnvironmentButton(GameEnvironmentType.Outdoor_Precision_Stand, "⭐ Stand Aberto com Foco Visual (Ilustração)", "Estande aberto com cascalho claro, barranco de terra, vegetação e alvo silhueta focado na alça/massa de mira.");
             DrawEnvironmentButton(GameEnvironmentType.IPSC_Outdoor_Short, "🏆 Pista Curta IPSC (Speed Option)", "3 alvos de papelão + 2 poppers metálicos rápidos a 7m e 9m.");
@@ -85,22 +86,30 @@ namespace IPSCSimulator.UI
             DrawEnvironmentButton(GameEnvironmentType.Tactical_CS_Killhouse, "🏢 Armazém Tático CQB (Estilo Counter-Strike)", "Ambiente urbano com contêineres marítimos, caixas militares e alvos hostis.");
             DrawEnvironmentButton(GameEnvironmentType.Bodycam_ShootHouse, "🎥 Killhouse Tático em Compensado (Estilo BODYCAM / UNRECORD)", "Shoot house de madeira compensada com vigas estruturais, iluminação de galpão e câmera corporal.");
 
-            GUILayout.Space(15);
+            GUILayout.Space(12);
 
-            // Seção 2: Seleção de Armas
-            GUILayout.Label("2. SELECIONE SEU ARMAMENTO (ARSENAL):", _sectionHeaderStyle);
-            GUILayout.Space(5);
+            // Seção 2: Seleção de Armas (Menu em 2 Etapas: Categorias -> Grade de Variedades)
+            GUILayout.Label("2. SELECIONE A CATEGORIA DO ARMAMENTO:", _sectionHeaderStyle);
+            GUILayout.Space(3);
 
             GUILayout.BeginHorizontal();
-            DrawWeaponButton(SelectedWeaponType.Pistol_9mm, "🔫 Pistola 9mm Tática", "17 munições | Cadência média | Recuo equilibrado");
-            DrawWeaponButton(SelectedWeaponType.Revolver_DanWesson, "💥 Revólver Dan Wesson 715", ".357 Magnum | 6 tiros | Alto impacto e som potente");
-            DrawWeaponButton(SelectedWeaponType.SMG_Tactical, "⚡ Submetralhadora SMG", "30 munições | Disparo contínuo | Alta cadência");
+            if (DrawCategoryTab(WeaponCategory.Pistols, "🔫 PISTOLAS")) _selectedCategory = WeaponCategory.Pistols;
+            if (DrawCategoryTab(WeaponCategory.Revolvers, "💥 REVÓLVERES")) _selectedCategory = WeaponCategory.Revolvers;
+            if (DrawCategoryTab(WeaponCategory.SubmachineGuns, "⚡ SUBMETRALHADORAS")) _selectedCategory = WeaponCategory.SubmachineGuns;
+            if (DrawCategoryTab(WeaponCategory.AssaultRifles, "🎯 FUZIS DE ASSALTO")) _selectedCategory = WeaponCategory.AssaultRifles;
             GUILayout.EndHorizontal();
+
+            GUILayout.Space(8);
+            GUILayout.Label($"<b><color=#FFD700>ARSENAL DISPONÍVEL - {_selectedCategory.ToString().ToUpper()}</color></b> (Clique na arma para equipar):", _subTitleStyle);
+            GUILayout.Space(4);
+
+            // Grade de Armas da Categoria Selecionada (Estilo Buy Menu CS)
+            DrawWeaponShowcaseGrid(_selectedCategory);
 
             GUILayout.FlexibleSpace();
 
             // Botão Principal de Iniciar
-            if (GUILayout.Button("▶️  INICIAR SIMULAÇÃO / ENTRAR NO MAPA", _btnStartStyle, GUILayout.Height(55)))
+            if (GUILayout.Button("▶️  INICIAR SIMULAÇÃO / ENTRAR NO MAPA", _btnStartStyle, GUILayout.Height(52)))
             {
                 if (TacticalGameManager.Instance != null)
                 {
@@ -111,23 +120,78 @@ namespace IPSCSimulator.UI
             GUILayout.EndArea();
         }
 
+        private bool DrawCategoryTab(WeaponCategory cat, string title)
+        {
+            bool isSelected = (_selectedCategory == cat);
+            GUIStyle style = isSelected ? _btnActiveStyle : _btnStyle;
+            return GUILayout.Button(title, style, GUILayout.Height(36));
+        }
+
         private void DrawEnvironmentButton(GameEnvironmentType env, string title, string description)
         {
             bool isSelected = (_tempEnv == env);
             GUIStyle style = isSelected ? _btnActiveStyle : _btnStyle;
-
-            if (GUILayout.Button($"{title}\n  {description}", style, GUILayout.Height(42)))
+            string text = isSelected 
+                ? $"<b><color=#00FFAA>● {title}</color></b>  <color=#DDDDDD>{description}</color>" 
+                : $"<b>{title}</b>  <color=#AAAAAA>{description}</color>";
+            if (GUILayout.Button(text, style, GUILayout.Height(30)))
             {
                 _tempEnv = env;
             }
+            GUILayout.Space(2);
         }
 
-        private void DrawWeaponButton(SelectedWeaponType weapon, string title, string specs)
+        private void DrawWeaponShowcaseGrid(WeaponCategory cat)
+        {
+            switch (cat)
+            {
+                case WeaponCategory.Pistols:
+                    GUILayout.BeginHorizontal();
+                    DrawWeaponCard(SelectedWeaponType.Pistol_Beretta_M9T_Black, "BERETTA M9T (BLACK)", "9x19mm", "17 Tiros", "Semi-Auto", "Pistola militar de alta precisão");
+                    DrawWeaponCard(SelectedWeaponType.Pistol_Beretta_M9T_Tan, "BERETTA M9T (TAN)", "9x19mm", "17 Tiros", "Semi-Auto", "Camuflagem desértica operacional");
+                    GUILayout.EndHorizontal();
+                    GUILayout.Space(4);
+                    GUILayout.BeginHorizontal();
+                    DrawWeaponCard(SelectedWeaponType.Pistol_Tactical_Glock, "GLOCK 17 COMBAT", "9x19mm", "17 Tiros", "Striker-Fired", "Perfil baixo e visada rápida");
+                    DrawWeaponCard(SelectedWeaponType.Pistol_Combat_Custom, "COLT 1911 CUSTOM", ".45 ACP", "15 Tiros", "Ação Simples", "Alto impacto e recuo firme");
+                    GUILayout.EndHorizontal();
+                    break;
+
+                case WeaponCategory.Revolvers:
+                    GUILayout.BeginHorizontal();
+                    DrawWeaponCard(SelectedWeaponType.Revolver_DanWesson_357, "DAN WESSON 715", ".357 MAG", "6 Tiros", "Ação Dupla", "Cano pesado ventilado fotorrealista");
+                    DrawWeaponCard(SelectedWeaponType.Revolver_Superhawk_Tactical, "SUPERHAWK TACTICAL", ".44 MAG", "6 Tiros", "Ação Dupla", "Trilho tático e poder devastador");
+                    GUILayout.EndHorizontal();
+                    break;
+
+                case WeaponCategory.SubmachineGuns:
+                    GUILayout.BeginHorizontal();
+                    DrawWeaponCard(SelectedWeaponType.SMG_Strongarm_Tactical, "MP5 STRONGARM", "9mm AUTO", "30 Tiros", "Automático", "Cadência de 800 RPM e baixo recuo");
+                    DrawWeaponCard(SelectedWeaponType.SMG_MP_Vector, "UMP-45 TACTICAL", ".45 AUTO", "30 Tiros", "Automático", "Poder de parada em combate urbano");
+                    DrawWeaponCard(SelectedWeaponType.SMG_P90_Compact, "P90 BULLPUP", "5.7x28mm", "50 Tiros", "Automático", "Carregador estendido de 50 projéteis");
+                    GUILayout.EndHorizontal();
+                    break;
+
+                case WeaponCategory.AssaultRifles:
+                    GUILayout.BeginHorizontal();
+                    DrawWeaponCard(SelectedWeaponType.Rifle_AKM_Tactical, "AKM 7.62x39mm", "7.62mm", "30 Tiros", "Automático", "Alta penetração e clássico russo");
+                    GUILayout.EndHorizontal();
+                    break;
+            }
+        }
+
+        private void DrawWeaponCard(SelectedWeaponType weapon, string name, string caliber, string capacity, string fireMode, string description)
         {
             bool isSelected = (_tempWeapon == weapon);
-            GUIStyle style = isSelected ? _btnActiveStyle : _btnStyle;
+            GUIStyle cardStyle = isSelected ? _btnActiveStyle : _btnStyle;
 
-            if (GUILayout.Button($"{title}\n{specs}", style, GUILayout.Height(52)))
+            string statusTag = isSelected ? "<b><color=#00FFAA>[✓ EQUIPADA]</color></b>" : "<color=#AAAAAA>[ CLIQUE P/ EQUIPAR ]</color>";
+            string cardText = $"<b><color=#FF4444>{name}</color></b>\n" +
+                              $"<color=#DDDDDD>Calibre: {caliber}  |  Capacidade: {capacity}  |  {fireMode}</color>\n" +
+                              $"<i><color=#999999>{description}</color></i>\n" +
+                              $"{statusTag}";
+
+            if (GUILayout.Button(cardText, cardStyle, GUILayout.Height(62)))
             {
                 _tempWeapon = weapon;
             }

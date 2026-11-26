@@ -110,11 +110,12 @@ namespace IPSCSimulator.Match
 
         public void CycleWeapon(int direction)
         {
-            int current = (int)SelectedWeapon;
-            int count = System.Enum.GetValues(typeof(SelectedWeaponType)).Length;
-            current = (current + direction) % count;
-            if (current < 0) current += count;
-            ChangeWeaponInGame((SelectedWeaponType)current);
+            var values = (SelectedWeaponType[])System.Enum.GetValues(typeof(SelectedWeaponType));
+            int idx = System.Array.IndexOf(values, SelectedWeapon);
+            if (idx < 0) idx = 0;
+            idx = (idx + direction) % values.Length;
+            if (idx < 0) idx += values.Length;
+            ChangeWeaponInGame(values[idx]);
         }
 
         public void RestartCurrentMap()

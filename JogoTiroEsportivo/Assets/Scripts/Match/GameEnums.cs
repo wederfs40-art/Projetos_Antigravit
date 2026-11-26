@@ -11,11 +11,39 @@ namespace IPSCSimulator.Match
         Outdoor_Precision_Stand // Stand de Tiro Aberto com Berma e Foco Visual (Conforme Ilustração)
     }
 
+    public enum WeaponCategory
+    {
+        Pistols,        // Pistolas Semiautomáticas
+        Revolvers,      // Revólveres & Magnuns
+        SubmachineGuns, // Submetralhadoras (SMGs)
+        AssaultRifles,  // Fuzis de Assalto (Rifles)
+        Shotguns        // Espingardas Calibre 12
+    }
+
     public enum SelectedWeaponType
     {
-        Pistol_9mm,         // Pistola 9mm (17 munições, cadência rápida)
-        Revolver_DanWesson, // Revólver Dan Wesson .357 (6 tiros de alto impacto)
-        SMG_Tactical        // Submetralhadora SMG (30 tiros automática)
+        // --- PISTOLAS ---
+        Pistol_Beretta_M9T_Black = 0,
+        Pistol_Beretta_M9T_Tan = 1,
+        Pistol_Tactical_Glock = 2,
+        Pistol_Combat_Custom = 3,
+
+        // --- REVÓLVERES ---
+        Revolver_DanWesson_357 = 10,
+        Revolver_Superhawk_Tactical = 11,
+
+        // --- SUBMETRALHADORAS (SMGs) ---
+        SMG_Strongarm_Tactical = 20,
+        SMG_MP_Vector = 21,
+        SMG_P90_Compact = 22,
+
+        // --- FUZIS DE ASSALTO ---
+        Rifle_AKM_Tactical = 30,
+
+        // Aliases mantidos para compatibilidade retroativa total
+        Pistol_9mm = Pistol_Beretta_M9T_Black,
+        Revolver_DanWesson = Revolver_DanWesson_357,
+        SMG_Tactical = Rifle_AKM_Tactical
     }
 
     public enum GameState

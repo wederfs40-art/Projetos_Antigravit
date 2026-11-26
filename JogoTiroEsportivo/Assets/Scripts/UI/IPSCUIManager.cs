@@ -3,6 +3,7 @@ using UnityEngine;
 namespace IPSCSimulator.UI
 {
     using IPSCSimulator.Match;
+    using IPSCSimulator.Setup;
     using IPSCSimulator.Targets;
     using IPSCSimulator.Weapons;
 
@@ -23,8 +24,12 @@ namespace IPSCSimulator.UI
         private Color _hitFeedbackColor = Color.white;
         private float _hitFeedbackTimer = 0f;
 
+        private bool _showBuyMenu = false;
+        private WeaponCategory _buyMenuCategory = WeaponCategory.Pistols;
+
         private GUIStyle _timerStyle;
         private GUIStyle _statusStyle;
+        private GUIStyle _titleStyle;
         private GUIStyle _splitStyle;
         private GUIStyle _ammoStyle;
         private GUIStyle _resultBoxStyle;
@@ -63,6 +68,22 @@ namespace IPSCSimulator.UI
             {
                 _hitFeedbackTimer -= Time.deltaTime;
                 if (_hitFeedbackTimer <= 0f) _hitFeedbackStr = "";
+            }
+
+            // Tecla [B]: Abre ou fecha o Menu de Arsenal / Buy Menu estilo Counter-Strike
+            if (Input.GetKeyDown(KeyCode.B))
+            {
+                _showBuyMenu = !_showBuyMenu;
+                if (_showBuyMenu)
+                {
+                    Cursor.lockState = CursorLockMode.None;
+                    Cursor.visible = true;
+                }
+                else
+                {
+                    Cursor.lockState = CursorLockMode.Locked;
+                    Cursor.visible = false;
+                }
             }
         }
 
@@ -159,6 +180,14 @@ namespace IPSCSimulator.UI
                 };
                 _statusStyle.normal.textColor = Color.yellow;
 
+                _titleStyle = new GUIStyle(GUI.skin.label)
+                {
+                    fontSize = 20,
+                    fontStyle = FontStyle.Bold,
+                    alignment = TextAnchor.MiddleCenter
+                };
+                _titleStyle.normal.textColor = new Color(1f, 0.85f, 0.2f);
+
                 _splitStyle = new GUIStyle(GUI.skin.label)
                 {
                     fontSize = 20,
@@ -244,26 +273,33 @@ namespace IPSCSimulator.UI
             GUI.Label(ammoRect, _ammoStr, _ammoStyle);
 
             // 4. Guia de Controles (canto inferior esquerdo)
-            float helpW = 380f;
-            float helpH = 75f;
+            float helpW = 420f;
+            float helpH = 80f;
             Rect helpRect = new Rect(20f, screenH - helpH - 20f, helpW, helpH);
             GUI.Box(helpRect, GUIContent.none, _resultBoxStyle);
-            string helpText = " [T] Iniciar Cronômetro    |  [Y] Encerrar Pista\n [R] Recarregar Magazine   |  [U] Obrear / Reset\n [1, 2, 3] Trocar de Arma   |  [Botão Dir.] Mira ADS";
+            string helpText = " [T] Iniciar Cronômetro  |  [Y] Encerrar Pista\n [R] Recarregar  |  [U] Obrear  |  [B] Arsenal CS\n [1, 2, 3] Troca Rápida  |  [Botão Dir.] Mira ADS";
             GUI.Label(new Rect(helpRect.x + 8f, helpRect.y + 8f, helpW - 16f, helpH - 16f), helpText, _controlsHelpStyle);
 
             // 4.1 Barra de Arsenal no Rodapé Central
-            float arsW = 540f;
+            float arsW = 620f;
             float arsH = 34f;
             Rect arsRect = new Rect((screenW - arsW) * 0.5f, screenH - arsH - 20f, arsW, arsH);
             GUI.Box(arsRect, GUIContent.none, _resultBoxStyle);
 
             SelectedWeaponType curW = (TacticalGameManager.Instance != null) ? TacticalGameManager.Instance.SelectedWeapon : SelectedWeaponType.Pistol_9mm;
-            string opt1 = (curW == SelectedWeaponType.Pistol_9mm) ? "<b><color=#00FFAA>[1] 🔫 Pistola 9mm</color></b>" : "<color=#888888>[1] Pistola 9mm</color>";
-            string opt2 = (curW == SelectedWeaponType.Revolver_DanWesson) ? "<b><color=#FFAA00>[2] 🤠 Dan Wesson .357</color></b>" : "<color=#888888>[2] Dan Wesson .357</color>";
-            string opt3 = (curW == SelectedWeaponType.SMG_Tactical) ? "<b><color=#00CCFF>[3] ⚡ SMG Tática</color></b>" : "<color=#888888>[3] SMG Tática</color>";
+            string opt1 = (curW == SelectedWeaponType.Pistol_Beretta_M9T_Black || curW == SelectedWeaponType.Pistol_9mm) ? "<b><color=#00FFAA>[1] 🔫 Pistola</color></b>" : "<color=#888888>[1] Pistola</color>";
+            string opt2 = (curW == SelectedWeaponType.Revolver_DanWesson_357 || curW == SelectedWeaponType.Revolver_DanWesson) ? "<b><color=#FFAA00>[2] 🤠 .357</color></b>" : "<color=#888888>[2] .357</color>";
+            string opt3 = (curW == SelectedWeaponType.Rifle_AKM_Tactical || curW == SelectedWeaponType.SMG_Tactical) ? "<b><color=#00CCFF>[3] ⚡ AKM/SMG</color></b>" : "<color=#888888>[3] AKM/SMG</color>";
+            string optBuy = "<b><color=#FFD700>[B] 🛒 ARSENAL SHOWCASE</color></b>";
 
             _arsenalStyle.normal.textColor = Color.white;
-            GUI.Label(arsRect, $"{opt1}     {opt2}     {opt3}", _arsenalStyle);
+            GUI.Label(arsRect, $"{opt1}    {opt2}    {opt3}    {optBuy}", _arsenalStyle);
+
+            // 4.2 Modal do Arsenal / Buy Menu (Estilo Counter-Strike)
+            if (_showBuyMenu)
+            {
+                DrawBuyMenuModal(screenW, screenH);
+            }
 
             // 5. Painel de Resultados (Centro da tela no fim de pista)
             if (_showResult)
@@ -284,6 +320,106 @@ namespace IPSCSimulator.UI
                     "  <i>Pressione [U] para Obrear os alvos ou [T] para nova tentativa.</i>";
 
                 GUI.Label(new Rect(resRect.x + 20f, resRect.y + 16f, resW - 40f, resH - 32f), summary, _resultTextStyle);
+            }
+        }
+
+        private void DrawBuyMenuModal(float screenW, float screenH)
+        {
+            // Fundo escuro semi-transparente
+            GUI.color = new Color(0f, 0f, 0f, 0.85f);
+            GUI.DrawTexture(new Rect(0, 0, screenW, screenH), Texture2D.whiteTexture);
+            GUI.color = Color.white;
+
+            float modalW = Mathf.Min(880f, screenW - 40f);
+            float modalH = Mathf.Min(560f, screenH - 40f);
+            Rect modalRect = new Rect((screenW - modalW) * 0.5f, (screenH - modalH) * 0.5f, modalW, modalH);
+
+            GUILayout.BeginArea(modalRect, _resultBoxStyle);
+
+            GUILayout.Label("🛒 <b><color=#FFD700>ARSENAL SHOWCASE - SELEÇÃO DE ARMAMENTO</color></b>", _titleStyle);
+            GUILayout.Label("Selecione a categoria e clique na arma para equipar instantaneamente em combate [Tecla B para fechar]", _controlsHelpStyle);
+            GUILayout.Space(12);
+
+            // Abas de Categorias
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("🔫 PISTOLAS", GUILayout.Height(36))) _buyMenuCategory = WeaponCategory.Pistols;
+            if (GUILayout.Button("💥 REVÓLVERES", GUILayout.Height(36))) _buyMenuCategory = WeaponCategory.Revolvers;
+            if (GUILayout.Button("⚡ SUBMETRALHADORAS", GUILayout.Height(36))) _buyMenuCategory = WeaponCategory.SubmachineGuns;
+            if (GUILayout.Button("🎯 FUZIS DE ASSALTO", GUILayout.Height(36))) _buyMenuCategory = WeaponCategory.AssaultRifles;
+            GUILayout.EndHorizontal();
+
+            GUILayout.Space(12);
+            GUILayout.Label($"<b>MODELOS DISPONÍVEIS: {_buyMenuCategory.ToString().ToUpper()}</b>", _statusStyle);
+            GUILayout.Space(8);
+
+            SelectedWeaponType curWeapon = (TacticalGameManager.Instance != null) ? TacticalGameManager.Instance.SelectedWeapon : SelectedWeaponType.Pistol_9mm;
+
+            // Grade de Armas da Categoria
+            switch (_buyMenuCategory)
+            {
+                case WeaponCategory.Pistols:
+                    GUILayout.BeginHorizontal();
+                    DrawBuyCard(SelectedWeaponType.Pistol_Beretta_M9T_Black, "BERETTA M9T (BLACK)", "9x19mm", "17 Tiros", curWeapon);
+                    DrawBuyCard(SelectedWeaponType.Pistol_Beretta_M9T_Tan, "BERETTA M9T (TAN)", "9x19mm", "17 Tiros", curWeapon);
+                    GUILayout.EndHorizontal();
+                    GUILayout.Space(6);
+                    GUILayout.BeginHorizontal();
+                    DrawBuyCard(SelectedWeaponType.Pistol_Tactical_Glock, "GLOCK 17 COMBAT", "9x19mm", "17 Tiros", curWeapon);
+                    DrawBuyCard(SelectedWeaponType.Pistol_Combat_Custom, "COLT 1911 CUSTOM", ".45 ACP", "15 Tiros", curWeapon);
+                    GUILayout.EndHorizontal();
+                    break;
+
+                case WeaponCategory.Revolvers:
+                    GUILayout.BeginHorizontal();
+                    DrawBuyCard(SelectedWeaponType.Revolver_DanWesson_357, "DAN WESSON 715", ".357 MAG", "6 Tiros", curWeapon);
+                    DrawBuyCard(SelectedWeaponType.Revolver_Superhawk_Tactical, "SUPERHAWK TACTICAL", ".44 MAG", "6 Tiros", curWeapon);
+                    GUILayout.EndHorizontal();
+                    break;
+
+                case WeaponCategory.SubmachineGuns:
+                    GUILayout.BeginHorizontal();
+                    DrawBuyCard(SelectedWeaponType.SMG_Strongarm_Tactical, "MP5 STRONGARM", "9mm AUTO", "30 Tiros", curWeapon);
+                    DrawBuyCard(SelectedWeaponType.SMG_MP_Vector, "UMP-45 TACTICAL", ".45 AUTO", "30 Tiros", curWeapon);
+                    DrawBuyCard(SelectedWeaponType.SMG_P90_Compact, "P90 BULLPUP", "5.7x28mm", "50 Tiros", curWeapon);
+                    GUILayout.EndHorizontal();
+                    break;
+
+                case WeaponCategory.AssaultRifles:
+                    GUILayout.BeginHorizontal();
+                    DrawBuyCard(SelectedWeaponType.Rifle_AKM_Tactical, "AKM 7.62x39mm RUSSIAN", "7.62mm", "30 Tiros", curWeapon);
+                    GUILayout.EndHorizontal();
+                    break;
+            }
+
+            GUILayout.FlexibleSpace();
+
+            if (GUILayout.Button("FECHAR ARSENAL [ESC / B]", GUILayout.Height(38)))
+            {
+                _showBuyMenu = false;
+                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.visible = false;
+            }
+
+            GUILayout.EndArea();
+        }
+
+        private void DrawBuyCard(SelectedWeaponType weapon, string name, string caliber, string capacity, SelectedWeaponType current)
+        {
+            bool isCurrent = (weapon == current);
+            string btnText = isCurrent 
+                ? $"<b><color=#FF3333>{name}</color></b>\n<color=#FFFFFF>{caliber} | {capacity}</color>\n<b><color=#00FFAA>[✓ EQUIPADA]</color></b>" 
+                : $"<b><color=#FF3333>{name}</color></b>\n<color=#DDDDDD>{caliber} | {capacity}</color>\n<color=#FFD700>[ CLIQUE P/ EQUIPAR ]</color>";
+
+            if (GUILayout.Button(btnText, GUILayout.Height(64)))
+            {
+                SceneGeneratorCore.SwitchEquippedWeapon(weapon);
+                if (TacticalGameManager.Instance != null)
+                {
+                    TacticalGameManager.Instance.SelectedWeapon = weapon;
+                }
+                _showBuyMenu = false;
+                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.visible = false;
             }
         }
     }
