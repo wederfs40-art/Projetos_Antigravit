@@ -817,6 +817,10 @@ namespace IPSCSimulator.Setup
             holder.transform.localPosition = new Vector3(0.085f, -0.125f, 0.30f);
 
             WeaponHandling handling = holder.AddComponent<WeaponHandling>();
+            WeaponProceduralMotion procMotion = holder.AddComponent<WeaponProceduralMotion>();
+            SetFieldValue(procMotion, "playerCamera", cam);
+            SetFieldValue(procMotion, "characterController", controller);
+            SetFieldValue(procMotion, "weaponTransform", holder.transform);
 
             // Adiciona o controlador de câmera corporal Bodycam com Free Aim e inércia física
             BodycamCameraController bodycam = camObj.AddComponent<BodycamCameraController>();
@@ -1153,10 +1157,42 @@ namespace IPSCSimulator.Setup
             SetFieldValue(handling, "weaponTransform", holder.transform);
             SetFieldValue(handling, "hipPosition", hipPos);
 
-            // Anexa os sistemas avançados: Movimentação Procedural (Sway/Bobbing), Ciclos Mecânicos (Inspect/Bolt) e Braços com IK
+            // Anexa e configura WeaponProceduralMotion na hierarquia da arma (WeaponHolder)
+            WeaponProceduralMotion procMotion = holder.GetComponent<WeaponProceduralMotion>();
+            if (procMotion == null) procMotion = holder.AddComponent<WeaponProceduralMotion>();
+
+            WeaponData wData = ScriptableObject.CreateInstance<WeaponData>();
+            wData.name = $"Data_{weaponType}";
+            SetFieldValue(wData, "weaponName", weaponType.ToString().Replace("_", " "));
+            SetFieldValue(wData, "adsLocalPosition", adsPos);
+            SetFieldValue(wData, "adsLocalRotation", Vector3.zero);
+            SetFieldValue(wData, "adsSpeed", 14.0f);
+            SetFieldValue(wData, "adsCameraFOV", 48.0f);
+            SetFieldValue(wData, "bulletSpeed", velocity);
+            SetFieldValue(wData, "penetrationPower", isAuto ? 55f : 40f);
+            SetFieldValue(wData, "baseSpread", isAuto ? 0.08f : 0.035f);
+            SetFieldValue(wData, "movementSpreadMultiplier", 2.5f);
+
+            procMotion.ConfigureStance(wData, hipPos);
+            SetFieldValue(procMotion, "weaponTransform", holder.transform);
+
+            Camera mainCam = Camera.main;
+            if (mainCam != null) SetFieldValue(procMotion, "playerCamera", mainCam);
+
+            CharacterController charCtrl = holder.GetComponentInParent<CharacterController>();
+            if (charCtrl != null) SetFieldValue(procMotion, "characterController", charCtrl);
+
+            // Anexa o sistema balístico WeaponBallistics
+            WeaponBallistics ballistics = gunRoot.GetComponent<WeaponBallistics>();
+            if (ballistics == null) ballistics = gunRoot.AddComponent<WeaponBallistics>();
+            ballistics.CurrentWeaponData = wData;
+            SetFieldValue(ballistics, "muzzlePoint", muzzleObj.transform);
+            if (mainCam != null) SetFieldValue(ballistics, "playerCamera", mainCam);
+            SetFieldValue(ballistics, "bulletDecalPrefab", decalPrefab);
+
+            // Desativa a movimentação anterior para que WeaponProceduralMotion assuma 100%
             ProceduralViewmodelMotion motion = holder.GetComponent<ProceduralViewmodelMotion>();
-            if (motion == null) motion = holder.AddComponent<ProceduralViewmodelMotion>();
-            motion.ConfigureStancePositions(hipPos, adsPos);
+            if (motion != null) motion.enabled = false;
 
             TacticalWeaponCycles cycles = holder.GetComponent<TacticalWeaponCycles>();
             if (cycles == null) cycles = holder.AddComponent<TacticalWeaponCycles>();
@@ -1802,6 +1838,11 @@ namespace IPSCSimulator.Setup
             IPSCTargetZone zone = zoneObj.AddComponent<IPSCTargetZone>();
             SetFieldValue(zone, "zoneType", type);
             SetFieldValue(zone, "parentTarget", parentTarget);
+
+            // Torna o alvo de papelão penetrável por projéteis
+            PenetrableSurface penetrable = zoneObj.AddComponent<PenetrableSurface>();
+            SetFieldValue(penetrable, "materialType", SurfaceMaterialType.PapelaoAlvoIPSC);
+            penetrable.ApplyPresetDefaults();
         }
 
         private static void SetFieldValue(object target, string fieldName, object value)

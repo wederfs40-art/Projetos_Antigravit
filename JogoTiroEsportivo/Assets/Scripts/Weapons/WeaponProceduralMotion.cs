@@ -93,6 +93,22 @@ namespace IPSCSimulator.Weapons
             set => weaponData = value;
         }
 
+        private void OnEnable()
+        {
+            Weapon.OnWeaponFired += FireRecoil;
+        }
+
+        private void OnDisable()
+        {
+            Weapon.OnWeaponFired -= FireRecoil;
+        }
+
+        public void ConfigureStance(WeaponData data, Vector3 hipPos)
+        {
+            weaponData = data;
+            hipPosition = hipPos;
+        }
+
         private void Awake()
         {
             if (weaponTransform == null) weaponTransform = transform;
