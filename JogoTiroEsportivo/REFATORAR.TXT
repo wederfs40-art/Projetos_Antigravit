@@ -1,0 +1,209 @@
+================================================================================
+PLANO E AUDITORIA DE REFATORAÇÃO - JOGO TIRO ESPORTIVO (UNITY 6)
+Data: 27/11/2026
+Repositório: https://github.com/wederfs40-art/Projetos_Antigravit
+Projeto: JogoTiroEsportivo
+================================================================================
+
+--------------------------------------------------------------------------------
+[PROMPT DO USUÁRIO - INÍCIO DA REFATORAÇÃO]
+--------------------------------------------------------------------------------
+
+Atue como um Arquiteto de Software Sênior em Unity 6 (C#) e Especialista em Simulação Balística, Renderização Realista e FPS Tático.
+
+### Contexto do Projeto e Repositório
+Estou desenvolvendo o **JogoTiroEsportivo** localizado em:
+D:\weder\IAs\Antigravit\Projetos_Antigravit\JogoTiroEsportivo
+Repositório GitHub: https://github.com/wederfs40-art/Projetos_Antigravit
+
+O projeto já possui uma base funcional em Unity 6 com:
+- 6 cenários (3 pistas IPSC Outdoor, Estande Indoor, Killhouse CS-Style e Killhouse Policial estilo Bodycam).
+- Balística com Raycast contínuo, gravidade, Height-Over-Bore e ejeção física de cápsulas.
+- Shot Timer oficial de IPSC com Standby/BEEP, splits e cálculo de Hit Factor.
+- 3 armas funcionais (Pistola 9mm, Revólver .357 e SMG) com braços táticos (AttachTacticalHands) e Free Aim.
+
+### Objetivo da Refatoração e Evolução
+Quero elevar este projeto ao padrão visual e de gunplay de Call of Duty: Modern Warfare, expandindo os sistemas existentes para suportar:
+1. Gráficos Ultra-Realistas: Otimização/migração de pipeline (HDRP ou URP de alta fidelidade com iluminação volumétrica, reflexos SSR/Raytracing, pós-processamento cinematográfico e materiais PBR avançados).
+2. Acervo Massivo e Modular de Armas (Data-Driven): Refatorar o sistema atual das 3 armas para uma arquitetura baseada em ScriptableObjects e sistema modular (Gunsmith / Attachments de miras, canos, freios de boca, carregadores) suportando pistolas, revólveres, carabinas, fuzis de assalto, espingardas e rifles de precisão.
+3. Expansão de Realismo Balístico e Mecânico:
+   - Tiro de Precisão (Long Range): Adicionar vento dinâmico, coeficiente balístico (G1/G7), ajuste de lunetas (MIL/MOA), paralaxe e controle de respiração.
+   - Mecânica de Armas: Panes reais (malfunctions), recarga tática vs. emergencial (munição na câmara), superaquecimento e balística terminal (penetração em materiais como compensado, aço e concreto).
+4. Campanhas de Combate Tático: Estrutura de missões com IA tática de inimigos (cobertura, flanqueamento, supressão), mantendo e expandindo os modos de IPSC e Estandes Indoor/Outdoor já criados.
+
+### Protocolo de Execução (Siga rigorosamente por fases)
+
+FASE 1: Auditoria Técnica e Controle de Versão (Execute agora e aguarde minha aprovação)
+1. Verifique o status atual do Git (git status / branch main) para garantir que o working tree esteja limpo antes de qualquer alteração.
+2. Analise os scripts existentes em JogoTiroEsportivo\Assets (especialmente o sistema de armas, AttachTacticalHands, balística, controle de câmera Bodycam e gerenciador de IPSC/Shot Timer).
+3. Verifique o Packages/manifest.json e as configurações de gráficos atuais da Unity 6.
+4. Entregue um relatório diagnosticando:
+   - O que na arquitetura atual está acoplado (ex: armas hardcoded vs. ScriptableObjects).
+   - Quais scripts atuais serão mantidos e refatorados.
+   - Riscos de compatibilidade ao subir o nível gráfico para padrão Call of Duty.
+
+FASE 2: Plano de Arquitetura Modular
+- Proponha a nova estrutura de pastas, diagramas de classes C# (SOLID) para o novo Sistema de Armas Modular e Plano de Migração Gráfica.
+
+FASE 3: Execução Incremental com Commits Seguros
+- Só iniciaremos a escrita de código após minha aprovação da Fase 2, trabalhando módulo por módulo e criando branches/commits organizados no GitHub a cada etapa concluída.
+
+
+--------------------------------------------------------------------------------
+[RESPOSTA DO ARQUITETO - RELATÓRIO DE AUDITORIA TÉCNICA (FASE 1)]
+--------------------------------------------------------------------------------
+
+A auditoria completa do repositório, pacotes, configurações gráficas da Unity 6 e de todos os 35 scripts C# em Assets/Scripts/ foi concluída.
+
+## 1. Auditoria de Controle de Versão (Git) e Build
+
+- Branch ativa: main (origin/main), sincronizada no commit 9207797 ("ULTIMO").
+- Working Tree: Limpo (nothing to commit) antes da criação deste documento.
+- Versão da Engine: Unity 6000.3.29f1 (Unity 6.3), verificado em ProjectSettings/ProjectVersion.txt.
+- Build Settings: ProjectSettings/EditorBuildSettings.asset está com m_Scenes: [] (vazio), não registrando Assets/Scenes/IPSC_MainSimulation.unity.
+- Dependência de Editor em Runtime (CRÍTICO):
+  SceneGeneratorCore.cs (linhas 874-927) e LoadoutMenuManager.cs (linhas 701-715) carregam modelos 3D, materiais e skybox com UnityEditor.AssetDatabase.LoadAssetAtPath dentro de #if UNITY_EDITOR.
+  Em uma Build Standalone (.exe), todas as armas 3D somem e caem no fallback de primitivos geométricos.
+
+## 2. Auditoria de Pacotes e Configurações Gráficas (Unity 6)
+
+### Pacotes Instalados (Packages/manifest.json)
+Já instalados (subutilizados):
+- com.unity.render-pipelines.universal (17.0.3) — instalado, porém INATIVO.
+- com.unity.animation.rigging (1.3.1) — ideal para IK real das mãos/braços em armas modulares.
+- com.unity.cinemachine (3.1.7) — ideal para câmera tática, camera shake, recuo óptico e transições.
+- com.unity.inputsystem (1.16.0) — instalado com activeInputHandler: 2 (Both), mas nenhum script do projeto o utiliza (100% ainda usa UnityEngine.Input legado).
+- com.unity.burst (1.8.30) e com.unity.collections (2.6.8) — prontos para simulação balística de alta performance.
+
+Ausentes para o escopo desejado:
+- com.unity.render-pipelines.high-definition (HDRP), caso optemos por HDRP na Fase 2.
+- com.unity.ai.navigation (NavMesh Components modernos para a IA tática de combate).
+
+### Configurações Gráficas Atuais (GraphicsSettings.asset / QualitySettings.asset / ProjectSettings.asset)
+1. Render Pipeline ativo = Built-in Render Pipeline:
+   m_CustomRenderPipeline: {fileID: 0} tanto no GraphicsSettings quanto em todos os 6 perfis de QualitySettings. Os arquivos UniversalRenderPipelineGlobalSettings.asset e DefaultVolumeProfile.asset na raiz de Assets/ estão inativos.
+2. Color Space = Gamma (m_ActiveColorSpace: 0):
+   Bloqueador para PBR realista. Tanto URP High-Fidelity quanto HDRP exigem Linear Color Space (1); além disso, m_LightsUseLinearIntensity e m_LightsUseColorTemperature estão desligados (0), impedindo luzes físicas em Kelvin/Lux.
+3. Shadow Distance máxima = 150m (Ultra):
+   Insuficiente para tiro de precisão Long Range (300m–1000m+).
+4. Inventário de Materiais (83 arquivos .mat no projeto):
+   - DDDexter3D: possui variantes Built-in, URP e HDRP.
+   - GILD (Beretta M9T, Superhawk, Strongarm): possui Built-In e URP (sem HDRP pronto).
+   - Weapons_ChamferZone (AKM), DWm715 (.357), Low Poly Pistol Packs 1/3 e Low Poly SMG Pack 2: materiais em Standard (Built-in).
+   - Ponto positivo: os pacotes Low Poly já trazem modelos separados de Optics, Muzzles, UnderBarrels e Accessories úteis para prototipagem do Gunsmith.
+
+## 3. Diagnóstico Arquitetural: Acoplamentos, Duplicidades e Bugs Críticos
+
+### A. Fragmentação Crítica no Sistema de Armas (10 scripts em Assets/Scripts/Weapons/)
+O projeto acumulou múltiplas iterações paralelas que competem entre si:
+
+- 3 sistemas de disparo/balística concorrentes:
+  1. Weapon.cs + Bullet.cs — é o único ativo em runtime (acionado por WeaponHandling). Porém, dispara do centro da câmera (fireFromCameraCenter = true, ignorando Height-Over-Bore real quando ativo), não chama PenetrableSurface.cs, roda em Update() com Physics.RaycastAll (alocação GC por frame), identifica materiais por substring do nome do GameObject (Contains("barrel"), Contains("wood")) e não usa Object Pooling.
+  2. WeaponBallistics.cs — possui integração com PenetrableSurface e spread dinâmico, é anexado ao gunRoot em SceneGeneratorCore.cs (linha 1289), mas Shoot() nunca é invocado (código inativo).
+  3. TacticalWeaponSystem.cs — sistema paralelo completo (com Zeroing por Scroll e alinhamento por aimPoint), porém órfão (não anexado em nenhuma cena).
+
+- 5 controladores concorrentes de Viewmodel / ADS / Sway / Recuo:
+  WeaponHandling.cs (ativo para inputs), WeaponProceduralMotion.cs (ativo no WeaponHolder), ProceduralViewmodelMotion.cs (desativado), ProceduralWeaponViewmodel.cs (órfão) e TacticalWeaponSystem.cs (órfão).
+
+- Bugs de conflito já presentes no runtime atual:
+  * Sobrescrita da rotação da câmera: WeaponProceduralMotion.cs (linhas 408-412) executa playerCamera.transform.localRotation = Quaternion.Euler(_currentCameraRecoil.x, _currentCameraRecoil.y, 0f) todo frame, disputando diretamente com BodycamCameraController.cs (linha 107) e anulando o Free Aim (que é ignorado quando WeaponProceduralMotion está presente).
+  * Conflito de recarga (KeyCode.R) e reset de velocidade balística: Tanto WeaponHandling.cs (linha 121) quanto TacticalWeaponCycles.cs (linha 70) disparam corrotinas de recarga simultaneamente ao apertar R. Na linha 269 de TacticalWeaponCycles.cs, ao concluir a recarga, chama weapon.ConfigureWeapon(weapon.MagazineCapacity, 380f), sobrescrevendo a velocidade de fuzis (715 m/s) e revólveres (450 m/s) de volta para 380 m/s.
+
+### B. Armas Hardcoded vs. ScriptableObjects
+- Embora WeaponData.cs já exista como ScriptableObject, não há nenhum arquivo .asset salvo no projeto.
+- Os dados de armas estão hardcoded e duplicados em 4 lugares distintos:
+  1. enum SelectedWeaponType em Match/GameEnums.cs
+  2. switch (weaponType) + ScriptableObject.CreateInstance<WeaponData>() + injeção por Reflection (SetFieldValue) em Setup/SceneGeneratorCore.cs (linhas 876-1280)
+  3. Catálogo em memória + mapeamento frágil por string.Contains em UI/LoadoutMenuManager.cs (linhas 464-470 e 974-1036)
+  4. Cards hardcoded em UI/MainMenuManager.cs e UI/IPSCUIManager.cs
+
+### C. Braços Táticos (AttachTacticalHands -> TacticalViewmodelArms)
+- O método/script antigo AttachTacticalHands já foi substituído por Player/TacticalViewmodelArms.cs, que gera antebraços, luvas, dedos e relógio em runtime usando cubos e cilindros primitivos (GameObject.CreatePrimitive) e alterna posturas via if (weaponType == ...) hardcoded.
+- Já existe um Weapons/WeaponHandIK.cs com solver Two-Bone IK e ponte por reflexão para com.unity.animation.rigging, porém não está integrado a um rig SkinnedMeshRenderer nem à cena atual.
+
+### D. God Classes, Vazamentos de Memória e UI Duplicada
+- God Classes:
+  * Setup/SceneGeneratorCore.cs (2.014 linhas / 110 KB): constrói 7 cenários inteiros via primitivos, iluminação, player e armas usando Reflection (SetFieldValue).
+  * UI/LoadoutMenuManager.cs (1.410 linhas / 75 KB): mistura banco de dados, leitura de disco, rasterização de sprites em CPU e construção procedural de Canvas.
+- Vazamento de memória de GPU/Áudio:
+  * Bullet.cs (linha 150) e Weapon.cs (linha 239) criam um new Material(...) a cada faísca de impacto e a cada cápsula ejetada sem nunca destruir o material (GPU leak contínuo).
+  * Utilities/ProceduralAudio.cs sintetiza um new AudioClip na CPU em cada impacto de bala/alvo/recarga (sem cache), gerando spikes de CPU e vazamento de memória de áudio.
+- Conflito de UI (IMGUI vs. UGUI):
+  * UI/IPSCUIManager.cs (IMGUI) e UI/LoadoutMenuManager.cs (UGUI/TMP) disputam a tecla B para abrir menus de arsenal diferentes.
+  * Player/BodycamCameraController.cs (linha 181) aloca new GUIStyle a cada frame no OnGUI().
+
+## 4. Classificação dos Scripts Existentes
+
+[MANTER E EVOLUIR - CORE SÓLIDO]
+- Match/RangeOfficerTimer.cs
+- Targets/IPSCTarget.cs
+- Targets/IPSCTargetZone.cs
+- Targets/IPSCSteelPopper.cs
+Justificativa: Arquitetura limpa e bem isolada. Precisam apenas receber eventos de uma interface de disparo/dano (IDamageable / BallisticImpact), migrar inputs para o New Input System e consumir áudio em cache/SoundBank.
+
+[REFATORAR PROFUNDAMENTE]
+- Weapons/WeaponData.cs
+- Ballistics/PenetrableSurface.cs
+- Weapons/WeaponHandIK.cs
+- Player/PlayerController.cs
+- Player/BodycamCameraController.cs
+- Match/TacticalGameManager.cs
+- UI/GameplayHUD.cs
+- Player/BodycamPostProcessing.cs + Shaders/BodycamLensEffect.shader
+Justificativa: Boas bases conceituais, mas precisam ser desacopladas em componentes SOLID, data-driven (ScriptableObjects reais + AttachmentData + BallisticProfile), compatíveis com SRP/Render Graph (Unity 6) e New Input System.
+
+[CONSOLIDAR / SUBSTITUIR - UNIFICAÇÃO]
+- Weapons/Weapon.cs
+- Weapons/WeaponHandling.cs
+- Weapons/WeaponProceduralMotion.cs
+- Weapons/WeaponBallistics.cs
+- Ballistics/Bullet.cs
+- Weapons/TacticalWeaponCycles.cs
+- Player/TacticalViewmodelArms.cs
+- Setup/SceneGeneratorCore.cs
+- UI/LoadoutMenuManager.cs
+Justificativa: Consolidar os 5 sistemas de movimento e 3 de balística em uma única arquitetura modular (ModularWeaponController, BallisticSimulationManager, ProceduralWeaponAnimator, GunsmithAssembler); quebrar SceneGeneratorCore em cenas reais (.unity) + Prefabs modulares para suportar Lightmapping, Reflection Probes e NavMesh reais.
+
+[REMOVER - CÓDIGO MORTO / LEGADO IMGUI]
+- Weapons/ProceduralViewmodelMotion.cs
+- Weapons/ProceduralWeaponViewmodel.cs
+- Weapons/TacticalWeaponSystem.cs (reaproveitando lógica de Zeroing)
+- UI/MainMenuManager.cs
+- UI/IPSCUIManager.cs
+- Utilities/PBRMaterialFactory.cs e Utilities/ProceduralMaterials.cs (substituídos por materiais PBR reais no disco)
+Justificativa: Eliminam código órfão, conflitos de teclas (B/R/ESC) e overhead de IMGUI/geração procedural em CPU.
+
+## 5. Riscos de Compatibilidade ao Subir para Padrão Gráfico Call of Duty
+
+1. Quebra imediata do Pós-Processamento Bodycam (OnRenderImage):
+   BodycamPostProcessing.cs (linha 56) usa OnRenderImage + Graphics.Blit e BodycamLensEffect.shader usa CGPROGRAM/UnityCG.cginc. No URP e no HDRP da Unity 6, OnRenderImage nunca é executado. Será obrigatório reescrevê-lo em HLSL como ScriptableRenderFeature com Render Graph API (URP Unity 6) ou CustomPostProcessVolumeComponent (HDRP).
+
+2. Materiais Rosa (Shader Break) e Propriedades Incompatíveis em Runtime:
+   Todos os materiais Standard (~50 materiais entre Weapons_ChamferZone, DWm715, Low Poly Packs e Starter Assets) precisarão passar pelo Render Pipeline Converter (ou mapeamento de canais Albedo/MaskMap/Normal para HDRP).
+   Os scripts PBRMaterialFactory.cs, ProceduralMaterials.cs, TacticalViewmodelArms.cs e LoadoutMenuManager.cs referenciam Shader.Find("Standard") e propriedades exclusivas do Built-in (_Glossiness, _Mode, _MainTex) que não existem em URP (_BaseMap, _Smoothness) ou HDRP (_BaseColorMap, _MaskMap, HDRP/Lit).
+
+3. Migração Gamma -> Linear Color Space + Luzes Físicas:
+   Mudar m_ActiveColorSpace de 0 (Gamma) para 1 (Linear) altera drasticamente brilho, contraste e resposta especular de todas as cores definidas via código e de BodycamLightingSetup.cs / CinematicLightingSetup.cs (em HDRP, intensidades são medidas em Lux / Lumen / EV100, onde intensity = 1.1 vira escuridão total).
+
+4. Conflito de Viewmodel (Weapon Clipping em Paredes) + Lunetas PiP (Picture-in-Picture):
+   No URP, resolve-se nativamente com Camera Stacking (Overlay Camera para Viewmodel) ou Render Objects por Layer com limpeza de Depth. No HDRP, não existe Camera Stacking tradicional — usa-se Custom Pass (Depth Clear / Viewmodel Pass), que exige maior cuidado técnico, porém entrega Volumetrics, SSR, Contact Shadows, Area Lights e Raytracing nativos.
+
+5. Cenários Procedurais vs. Iluminação Realista (GI / APV / Lightmaps):
+   Enquanto os 7 mapas forem gerados em runtime por GameObject.CreatePrimitive(Cube) em SceneGeneratorCore.cs, é impossível usar Adaptive Probe Volumes (APV) da Unity 6, Lightmaps, Occlusion Culling e Baking de NavMesh. A transição para cenas .unity reais (mantendo o builder como ferramenta apenas de Editor) é essencial para o salto visual e de IA.
+
+6. Decalques de Bala em SRP:
+   O sistema atual instancia Quad com alpha blend (offset 0.001m), causando z-fighting e flutuação em quinas/superfícies curvas. Tanto URP quanto HDRP oferecem Decal Projector nativo (com normal map e profundidade real).
+
+--------------------------------------------------------------------------------
+[PRÓXIMO PASSO - RETOMADA EM CASA (FASE 2)]
+--------------------------------------------------------------------------------
+
+Decisão pendente para iniciar a FASE 2 (Plano de Arquitetura Modular):
+1. Aprovar o diagnóstico da Fase 1.
+2. Escolher o Render Pipeline alvo:
+   - Opção A — HDRP (Unity 6): Mais próximo do padrão Call of Duty: Modern Warfare (iluminação volumétrica nativa, SSR, Contact Shadows, Physical Sky/Clouds, suporte a Raytracing e DLSS/FSR nativo). Exige GPU dedicada moderna (RTX/RX intermediária ou superior) e conversão de shaders/luzes para unidades físicas.
+   - Opção B — URP High-Fidelity (Unity 6 Deferred+ / Render Graph): Pacote já instalado no projeto e já suportado nativamente pelos packs GILD e DDDexter3D; suporta SSAO, APV (GI), Decals, ACES e excelente FPS em GPUs mais modestas, porém não possui SSR nem Volumetric Fog/Raytracing nativos sem soluções customizadas.
+
+Ao retomar de casa, basta informar ao agente:
+"Leia JogoTiroEsportivo/REFATORAR.TXT. Aprovo a Fase 1 e escolho a Opção [A ou B]. Inicie a FASE 2."
+================================================================================
