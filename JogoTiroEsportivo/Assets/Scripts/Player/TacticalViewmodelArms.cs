@@ -82,17 +82,8 @@ namespace IPSCSimulator.Player
 
         private void LateUpdate()
         {
-            if (_weaponHolder == null) return;
-
-            // Transição suave para recarga ou inspect
-            Vector3 targetOffset = _stanceOffset;
-            if (_cycles != null && _cycles.IsReloading)
-            {
-                targetOffset += new Vector3(0.02f, -0.06f, -0.04f);
-            }
-
-            // Aplica micro-ajuste tático sem interferir no controle de mira ADS
-            transform.localPosition = Vector3.SmoothDamp(transform.localPosition, targetOffset, ref _currentOffsetVelocity, 0.08f);
+            // O posicionamento e postura da arma são gerenciados de forma unificada pelo WeaponProceduralMotion.
+            // Não sobrescrever transform.localPosition do WeaponHolder aqui para evitar que a arma seja colada na câmera (0,0,0) ou desapareça.
         }
     }
 }

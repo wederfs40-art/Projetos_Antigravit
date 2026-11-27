@@ -123,6 +123,13 @@ namespace IPSCSimulator.Setup
                 menuObj.transform.SetParent(root.transform);
                 menuObj.AddComponent<MainMenuManager>();
             }
+
+            // Garante que o menu de Arsenal estilo CS2 esteja sempre disponível para alternar com a tecla [B]
+            if (Object.FindAnyObjectByType<IPSCSimulator.UI.LoadoutMenuManager>() == null)
+            {
+                var loadout = IPSCSimulator.UI.LoadoutMenuManager.CreateProceduralLoadoutCanvas();
+                loadout.SetMenuOpen(false); // Inicia fechado para o jogador jogar diretamente
+            }
         }
 
         // =========================================================================
@@ -1051,12 +1058,12 @@ namespace IPSCSimulator.Setup
                         velocity = 715f;
                         isAuto = true;
                         recoilMult = 1.25f;
-                        modelInstance.transform.localPosition = Vector3.zero;
+                        modelInstance.transform.localPosition = new Vector3(0f, -0.07f, 0.22f);
                         modelInstance.transform.localRotation = Quaternion.identity;
-                        modelInstance.transform.localScale = Vector3.one * 0.95f;
+                        modelInstance.transform.localScale = Vector3.one * 0.90f;
                         muzzleObj.transform.localPosition = new Vector3(0f, 0.040f, 0.65f);
-                        adsPos = new Vector3(0f, -0.065f, 0.19f);
-                        hipPos = new Vector3(0.095f, -0.140f, 0.32f);
+                        adsPos = new Vector3(0f, -0.058f, 0.26f);
+                        hipPos = new Vector3(0.12f, -0.16f, 0.36f);
                         slideObj = FindChildRecursive(modelInstance.transform, "WPN_AKM_bolt_carrier", "SMG_F_Bolt", "Slide", "Bolt");
                         magObj = FindChildRecursive(modelInstance.transform, "WPN_AKM_magazine", "SMG_F_Mag", "Magazine", "Mag");
                         break;
@@ -1101,34 +1108,41 @@ namespace IPSCSimulator.Setup
             }
             else
             {
-                // Fallback procedural
+                // Fallback procedural garantido para qualquer armamento
                 switch (weaponType)
                 {
-                    case SelectedWeaponType.Pistol_9mm:
-                        capacity = 17;
-                        velocity = 380f;
-                        isAuto = false;
-                        recoilMult = 1.0f;
-                        adsPos = new Vector3(0f, -0.0465f, 0.32f);
-                        slideObj = BuildDetailedPistolMesh(gunRoot.transform, muzzleObj.transform, matMetal, matSlide, matFiber, matBrass);
-                        break;
-
-                    case SelectedWeaponType.Revolver_DanWesson:
+                    case SelectedWeaponType.Revolver_DanWesson_357:
+                    case SelectedWeaponType.Revolver_Superhawk_Tactical:
                         capacity = 6;
                         velocity = 450f;
                         isAuto = false;
                         recoilMult = 1.75f;
-                        adsPos = new Vector3(0f, -0.052f, 0.30f);
+                        adsPos = new Vector3(0f, -0.052f, 0.28f);
+                        hipPos = new Vector3(0.10f, -0.13f, 0.32f);
                         slideObj = BuildDetailedRevolverMesh(gunRoot.transform, muzzleObj.transform, matMetal, matSlide, matFiber, matBrass);
                         break;
 
-                    case SelectedWeaponType.SMG_Tactical:
+                    case SelectedWeaponType.SMG_Strongarm_Tactical:
+                    case SelectedWeaponType.SMG_MP_Vector:
+                    case SelectedWeaponType.SMG_P90_Compact:
+                    case SelectedWeaponType.Rifle_AKM_Tactical:
                         capacity = 30;
-                        velocity = 410f;
+                        velocity = 715f;
                         isAuto = true;
-                        recoilMult = 0.85f;
-                        adsPos = new Vector3(0f, -0.065f, 0.32f);
+                        recoilMult = 1.1f;
+                        adsPos = new Vector3(0f, -0.058f, 0.26f);
+                        hipPos = new Vector3(0.12f, -0.16f, 0.36f);
                         slideObj = BuildDetailedSMGMesh(gunRoot.transform, muzzleObj.transform, matMetal, matSlide, matFiber);
+                        break;
+
+                    default: // Pistolas e modelos padrão
+                        capacity = 17;
+                        velocity = 380f;
+                        isAuto = false;
+                        recoilMult = 1.0f;
+                        adsPos = new Vector3(0f, -0.0465f, 0.22f);
+                        hipPos = new Vector3(0.10f, -0.13f, 0.32f);
+                        slideObj = BuildDetailedPistolMesh(gunRoot.transform, muzzleObj.transform, matMetal, matSlide, matFiber, matBrass);
                         break;
                 }
             }

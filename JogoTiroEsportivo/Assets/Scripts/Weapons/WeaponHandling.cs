@@ -77,8 +77,8 @@ namespace IPSCSimulator.Weapons
         {
             HandleInputs();
 
-            // Se ProceduralViewmodelMotion estiver ativo, ele assume o controle unificado da postura, sway e recuo
-            if (_proceduralMotion == null)
+            // Se WeaponProceduralMotion ou ProceduralViewmodelMotion estiver ativo, eles assumem o controle unificado da postura, sway e recuo
+            if (_proceduralMotion == null && GetComponent<WeaponProceduralMotion>() == null)
             {
                 ProcessSwayAndBreathing();
                 ProcessRecoilRecovery();
