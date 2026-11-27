@@ -93,7 +93,7 @@ namespace IPSCSimulator.Weapons
         /// </summary>
         private void CheckAndBindAnimationRigging()
         {
-            if (!syncWithAnimationRigging) return;
+            if (!syncWithAnimationRigging || _checkedRiggingPackage) return;
 
             // Busca tipos do pacote com.unity.animation.rigging por reflexão segura
             Type constraintType = Type.GetType("UnityEngine.Animations.Rigging.TwoBoneIKConstraint, Unity.Animation.Rigging");

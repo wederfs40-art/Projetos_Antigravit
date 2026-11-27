@@ -232,18 +232,19 @@ namespace IPSCSimulator.EditorTools
                 var priorityProp = volumeType.GetProperty("priority");
                 if (priorityProp != null) priorityProp.SetValue(vol, 100f);
 
-                // Cria ou carrega um Profile de Volume
-                Type profileType = Type.GetType("UnityEngine.Rendering.VolumeProfile, Unity.RenderPipelines.Core.Runtime");
+                // Cria ou carrega um Profile de Volume via reflexão segura (compatível com Built-in e SRP)
+                Type profileType = Type.GetType("UnityEngine.Rendering.VolumeProfile, Unity.RenderPipelines.Core.Runtime")
+                                ?? Type.GetType("UnityEngine.Rendering.VolumeProfile, UnityEngine.Rendering");
                 if (profileType != null)
                 {
                     string profileDir = "Assets/Settings";
                     if (!Directory.Exists(profileDir)) Directory.CreateDirectory(profileDir);
                     string profilePath = $"{profileDir}/COD_VisualProfile.asset";
 
-                    VolumeProfile profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(profilePath);
+                    ScriptableObject profile = AssetDatabase.LoadAssetAtPath(profilePath, profileType) as ScriptableObject;
                     if (profile == null)
                     {
-                        profile = ScriptableObject.CreateInstance<VolumeProfile>();
+                        profile = ScriptableObject.CreateInstance(profileType);
                         profile.name = "COD_VisualProfile";
                         AssetDatabase.CreateAsset(profile, profilePath);
                         AssetDatabase.SaveAssets();
