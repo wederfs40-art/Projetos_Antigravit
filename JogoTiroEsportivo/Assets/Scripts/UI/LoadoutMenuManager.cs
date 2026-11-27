@@ -882,8 +882,8 @@ namespace IPSCSimulator.UI
             cTxtRt.offsetMin = Vector2.zero;
             cTxtRt.offsetMax = Vector2.zero;
             TextMeshProUGUI cTxt = cTxtObj.AddComponent<TextMeshProUGUI>();
-            cTxt.text = "✕ FECHAR [ B ]";
-            cTxt.fontSize = 14;
+            cTxt.text = "[X] FECHAR (B)";
+            cTxt.fontSize = 13;
             cTxt.fontStyle = FontStyles.Bold;
             cTxt.alignment = TextAlignmentOptions.Center;
             cTxt.color = Color.white;

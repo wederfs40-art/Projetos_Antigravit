@@ -829,7 +829,7 @@ namespace IPSCSimulator.Setup
             WeaponHandling handling = holder.AddComponent<WeaponHandling>();
             WeaponProceduralMotion procMotion = holder.AddComponent<WeaponProceduralMotion>();
             SetFieldValue(procMotion, "playerCamera", cam);
-            SetFieldValue(procMotion, "characterController", controller);
+            SetFieldValue(procMotion, "characterController", cc);
             SetFieldValue(procMotion, "weaponTransform", holder.transform);
 
             // Adiciona o controlador de câmera corporal Bodycam com Free Aim e inércia física
