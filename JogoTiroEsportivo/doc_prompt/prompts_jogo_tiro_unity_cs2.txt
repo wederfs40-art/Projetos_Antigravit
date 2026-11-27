@@ -3,7 +3,7 @@ ROTEIRO DE PROMPTS PARA CRIAÇÃO DE JOGO DE TIRO ESTILO COUNTER-STRIKE 2 (UNITY
 ================================================================================
 
 INSTRUÇÕES DE USO:
-1. Siga rigorosamente a ordem numérica de 1 a 6.
+1. Siga rigorosamente a ordem numérica de 1 a 10.
 2. Envie UM prompt por vez para a sua IA.
 3. Só avance para o próximo prompt após testar o código na Unity e garantir que
    não há nenhum erro vermelho na aba Console.
@@ -97,4 +97,102 @@ Cenário 2: Pista Aberta (Outdoor)
 
 Pós-Processamento (Volume Profile):
 - com os valores exatos recomendados para Tonemapping (ACES), Bloom (sutil, apenas nos reflexos metálicos e lâmpadas), Ambient Occlusion (para dar peso aos objetos no chão) e Color Adjustments (contraste e nitidez) elimine o aspecto 'plástico' padrão da Unity.
+
+
+--------------------------------------------------------------------------------
+PROMPT 7: ALINHAMENTO ANALÍTICO DE MIRA ÓPTICA (FRONT & REAR SIGHT SOCKETS) E DISPARO COAXIAL
+Objetivo: Alinhar com precisão micrométrica a alça e massa de mira no centro da tela e garantir disparo coaxial ao centro da câmera (Viewport 0.5, 0.5) sem inclinação angular para baixo.
+--------------------------------------------------------------------------------
+
+Atue como um programador sênior de jogos de tiro (FPS) na Unity C#. Preciso corrigir e elevar o sistema de mira (ADS - Aim Down Sights) e a balística de saída dos projéteis para um padrão de precisão cirúrgico:
+
+Problemas a Resolver:
+1. Posição da Câmera vs Cano: Frequentemente a câmera fica alta demais, exibindo a traseira do ferrolho e fazendo o cano parecer apontado para baixo. É necessário abaixar a câmera / elevar a arma e nivelar o pitch (rotação X) para que o ferrolho fique perfeitamente paralelo ao solo (nivelado com o horizonte).
+2. Sockets de Mira Óptica Analíticos: Crie dois pontos de referência (Transforms / Sockets) filhos da arma ou do ferrolho móvel:
+   - `FrontSightSocket`: Posicionado no topo da massa de mira frontal.
+   - `RearSightSocket`: Posicionado no entalhe central da alça de mira traseira.
+3. Alinhamento Coaxial em ADS: Ao segurar o botão direito (ADS), calcule matematicamente a posição e rotação relativas da arma para que a reta que liga o Rear Sight ao Front Sight coincida exatamente com a linha de visão do jogador no centro do Viewport da câmera (X = 0.5, Y = 0.5).
+4. Vetor de Disparo Coaxial: No script `Weapon.cs`, exponha a opção booleana `fireFromCameraCenter` (padrão `true`). Quando ativa, o Raycast ou projétil balístico sai exatamente do centro da câmera (`playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f))`) na direção focal do alinhamento das miras, eliminando erros de paralaxe de curta distância e tiros que saem inclinados para baixo.
+
+Me entregue as alterações completas nos scripts `Weapon.cs` e `WeaponProceduralMotion.cs`, além do método auxiliar para calcular os sockets a partir dos vértices ou pontos do modelo 3D.
+
+
+--------------------------------------------------------------------------------
+PROMPT 8: PAINEL VISUAL DE CALIBRAÇÃO EM TEMPO REAL (SLIDERS IMGUI, TRAVA ADS F1/F2 E RETÍCULO GUIA)
+Objetivo: Ajustar milimetricamente offsets de posição e rotação da arma em Play Mode com interface interativa e cópia instantânea para C#.
+--------------------------------------------------------------------------------
+
+Crie um painel de calibração em tempo real para ajuste de mira (ADS Sight Tuner) usando a interface gráfica imediata (IMGUI / OnGUI) da Unity no script `WeaponProceduralMotion.cs`:
+
+Funcionalidades Exigidas:
+1. Variáveis Públicas de Calibração:
+   - `public Vector3 adsPositionOffset;` (Offset fino em metros/milímetros para X, Y e Z).
+   - `public Vector3 adsRotationOffset;` (Offset fino em graus para Pitch no X, Yaw no Y e Roll no Z).
+2. Interface Flutuante na Tela (IMGUI):
+   - Tecla de atalho `F1` para abrir/fechar a janela de calibração "CALIBRAÇÃO DE MIRA ADS (CS2 SIGHT TUNER)".
+   - Tecla de atalho `F2` para alternar "Travar Mira ADS" (`forceLockADS`), permitindo calibrar com as duas mãos livres no teclado e mouse sem precisar segurar o botão direito.
+   - Sliders interativos com valores numéricos para cada eixo (X, Y, Z de posição e Pitch, Yaw, Roll de rotação).
+   - Botões de micro-passo `[-]` e `[+]` ao lado de cada slider para ajustes sub-milimétricos (ex: passos de 0.0005m na posição e 0.1° na rotação).
+3. Retículo Guia Óptico Central:
+   - Ponto/cruz central verde de 1 pixel exato no centro da tela (`Screen.width / 2`, `Screen.height / 2`) para servir de gabarito visual perfeito durante o alinhamento da massa e alça de mira.
+4. Exportação com 1 Clique (Clipboard):
+   - Botão "📋 COPIAR VALORES C#" e atalho `P` que copia para o clipboard do sistema a sintaxe C# pronta com as coordenadas calibradas para colar diretamente no código ou Inspector:
+     `adsPos = new Vector3(Xf, Yf, Zf); adsRot = new Vector3(Pitchf, Yawf, Rollf);`
+   - Botão "🔄 RESETAR" para zerar os offsets instantaneamente.
+
+Me entregue o código completo integrado ao `WeaponProceduralMotion.cs`.
+
+
+--------------------------------------------------------------------------------
+PROMPT 9: SISTEMA DE ARMA TÁTICA AAA ESTILO CALL OF DUTY (TACTICAL WEAPON SYSTEM & ZEROING)
+Objetivo: Implementar sistema de arma tática moderna com mira precisa via aimPoint, zeragem balística por scroll, balanço inercial (sway) e recuo procedural físico.
+--------------------------------------------------------------------------------
+
+Atue como Lead Gameplay Programmer especializado em shooters táticos AAA (Call of Duty / Modern Warfare / Tarkov). Desenvolva o script `TacticalWeaponSystem.cs` em C# para Unity:
+
+Arquitetura e Recursos:
+1. Estrutura Viewmodel / WeaponHolder:
+   - O script deve controlar o objeto pai `WeaponHolder` (que contém tanto o Rig de braços FPS quanto a arma equipada), movendo o conjunto harmonicamente.
+2. Alinhamento Ótico de Precisão (ADS via aimPoint):
+   - Utilize um Transform de referência `aimPoint` posicionado na arma entre a alça e a massa de mira.
+   - Ao segurar o botão direito (ADS), calcule a transição de posição e rotação para centralizar perfeitamente o `aimPoint` na linha focal da câmera (Viewport 0.5, 0.5), com FOV cinemático dinâmico (ex: 50°).
+   - Exponha `calibrationPosOffset` e `calibrationRotOffset` para calibração fina no Inspector e desenhe uma linha guia vermelha via `Gizmos.DrawLine` na Scene view apontando para o infinito.
+3. Zeragem Balística pelo Jogador (Zeroing):
+   - Durante a visada (ADS), permita ao operador rodar o Scroll do Mouse para alternar as distâncias de zeragem (`25m`, `50m`, `100m`, `200m`).
+   - Aplique uma compensação sutil de Pitch (`pitchStepPerZero`, ex: 0.08° por nível) para elevar o cano e compensar a gravidade do projétil na distância escolhida.
+   - Atualize em tempo real um elemento de interface `TextMeshProUGUI zeroingTextUI` com a informação (ex: "ZERO: 50m").
+4. Sensação Tática AAA (Sway & Recoil):
+   - Weapon Sway: Inércia suave baseada no deslocamento do mouse nos eixos X e Y com inclinação sutil (Tilt).
+   - Procedural Recoil: Coice mecânico com deslocamento físico para trás (Z), elevação do cano (Y/Pitch) e recuperação elástica suave após o disparo.
+
+Me entregue o script `TacticalWeaponSystem.cs` completo e pronto para produção.
+
+
+--------------------------------------------------------------------------------
+PROMPT 10: SUPORTE A BRAÇOS FPS, CINEMÁTICA INVERSA (WEAPON HAND IK) E PÓS-PROCESSAMENTO REALISTA
+Objetivo: Acoplar braços de operador em primeira pessoa com pegada em duas mãos via Inverse Kinematics (IK) e automatizar o setup gráfico para fidelidade visual cinematográfica.
+--------------------------------------------------------------------------------
+
+Atue como Technical Artist e Programador de Animação sênior na Unity. Crie dois componentes essenciais para elevar o jogo ao nível de fidelidade AAA:
+
+Parte 1: Cinemática Inversa para Braços FPS (`WeaponHandIK.cs`)
+1. Fixação da Mão Esquerda:
+   - Script para controlar os ossos do braço esquerdo (Upper Arm, Forearm, Hand) fixando a mão firmemente em um ponto específico da arma (`leftHandGripTarget` no guarda-mato ou handguard), com orientação natural do cotovelo via `leftElbowHint`.
+2. Compatibilidade Dupla (Animation Rigging + Fallback Analítico):
+   - Suporte nativo ao componente `TwoBoneIKConstraint` do pacote oficial `com.unity.animation.rigging`.
+   - Fallback Analítico Procedural: Implemente um solver de Two-Bone IK autônomo baseado na Lei dos Cossenos em C#, permitindo que o sistema funcione com 100% de estabilidade mesmo no Built-in Render Pipeline sem pacotes externos instalados.
+
+Parte 2: Automação de Pós-Processamento Realista (`RealisticSetupTool.cs`)
+1. Ferramenta de Editor com Menu:
+   - Crie um script de Editor acessível através de `Tools > Setup Call of Duty Visuals` (e `IPSC Simulator > Setup Call of Duty Visuals`).
+2. Diagnóstico Inteligente de Pipeline:
+   - Inspecione `Packages/manifest.json` e `GraphicsSettings` para detectar se o projeto está em Built-in, Universal RP (URP) ou High Definition RP (HDRP).
+   - Verifique se os pacotes `com.unity.render-pipelines.universal` e `com.unity.animation.rigging` estão instalados, com botões para adicioná-los automaticamente com 1 clique se desejado.
+3. Configuração Automática de Iluminação e Pós-Processamento:
+   - Configure HDR (Alta Faixa Dinâmica) e MSAA 4x na câmera principal.
+   - Ative `DepthTextureMode.Depth | DepthTextureMode.DepthNormals` para viabilizar efeitos de oclusão de ambiente e profundidade de campo.
+   - Crie e configure automaticamente um `COD_Global_Volume` na cena com Tonemapping ACES Filmic, Ambient Occlusion (SSAO), Bloom sutil para brilho metálico, Vignette cinemática e Depth of Field dinâmico para o modo de mira.
+
+Parte 3: Guia de Hierarquia do Inspector
+Me forneça o diagrama da árvore de GameObjects recomendada para conectar a câmera, o WeaponHolder, o rig de braços FPS e a arma.
 ================================================================================
