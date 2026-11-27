@@ -577,13 +577,13 @@ namespace IPSCSimulator.Weapons
                 Debug.Log($"<color=#00FFAA>[Calibração ADS Copiada para Clipboard!]</color>\n{code}");
             }
 
-            if (GUILayout.Button("🔄 RESETAR", _buttonStyle, GUILayout.Height(26), GUILayout.Width(85)))
+            if (GUILayout.Button("[R] RESETAR", _buttonStyle, GUILayout.Height(26), GUILayout.Width(85)))
             {
                 adsPositionOffset = Vector3.zero;
                 adsRotationOffset = Vector3.zero;
             }
 
-            if (GUILayout.Button("✕ FECHAR (F1)", _buttonStyle, GUILayout.Height(26), GUILayout.Width(100)))
+            if (GUILayout.Button("[X] FECHAR (F1)", _buttonStyle, GUILayout.Height(26), GUILayout.Width(100)))
             {
                 ToggleDebugCalibrationUI(false);
             }

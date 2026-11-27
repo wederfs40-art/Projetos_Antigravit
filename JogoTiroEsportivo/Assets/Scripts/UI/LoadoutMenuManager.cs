@@ -98,10 +98,10 @@ namespace IPSCSimulator.UI
             SelectEnvironment(GameEnvironmentType.Outdoor_Precision_Stand);
             SetupPreviewEnvironment();
 
-            // Se o jogo já estiver com estande ativo na cena, inicia com menu pronto para alternar via [B]
+            // Se o jogo já estiver com estande ativo na cena, inicia com menu fechado pronto para jogar (e alternar via [B])
             if (GameObject.Find("--- IPSC SHOOTING RANGE ---") != null)
             {
-                SetMenuOpen(true);
+                SetMenuOpen(false);
             }
             else
             {
@@ -173,7 +173,11 @@ namespace IPSCSimulator.UI
             {
                 for (int i = 1; i < existing.Length; i++)
                 {
-                    if (existing[i] != null) Destroy(existing[i].gameObject);
+                    if (existing[i] != null)
+                    {
+                        existing[i].enabled = false;
+                        Destroy(existing[i].gameObject);
+                    }
                 }
             }
             else if (existing == null || existing.Length == 0)
@@ -1033,8 +1037,19 @@ namespace IPSCSimulator.UI
 
         private void SetField(object obj, string name, object value)
         {
-            var f = obj.GetType().GetField(name, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
-            if (f != null) f.SetValue(obj, value);
+            if (obj == null) return;
+            try
+            {
+                var f = obj.GetType().GetField(name, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+                if (f != null)
+                {
+                    if (value == null || f.FieldType.IsAssignableFrom(value.GetType()))
+                    {
+                        f.SetValue(obj, value);
+                    }
+                }
+            }
+            catch {}
         }
 
         // ========================================================================================
@@ -1061,7 +1076,11 @@ namespace IPSCSimulator.UI
             {
                 for (int i = 1; i < existingES.Length; i++)
                 {
-                    if (existingES[i] != null) DestroyImmediate(existingES[i].gameObject);
+                    if (existingES[i] != null)
+                    {
+                        existingES[i].enabled = false;
+                        DestroyImmediate(existingES[i].gameObject);
+                    }
                 }
             }
 

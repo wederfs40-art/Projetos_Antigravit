@@ -196,3 +196,43 @@ Parte 2: Automação de Pós-Processamento Realista (`RealisticSetupTool.cs`)
 Parte 3: Guia de Hierarquia do Inspector
 Me forneça o diagrama da árvore de GameObjects recomendada para conectar a câmera, o WeaponHolder, o rig de braços FPS e a arma.
 ================================================================================
+
+
+--------------------------------------------------------------------------------
+PROMPT 11: IMPLEMENTAÇÃO DOS BRAÇOS/MÃOS TÁTICAS (VIEWMODEL ARMS), CORREÇÃO DE TRAVAMENTO NA TROCA DE ARMAS E RESOLUÇÃO DE ERROS DE SISTEMA
+Objetivo: Renderizar braços e mãos táticas do operador empunhando a arma em primeira pessoa, eliminar travamentos na troca de armas, blindar erros de reflexão e solucionar warnings de fontes e EventSystem.
+--------------------------------------------------------------------------------
+
+Atue como Engenheiro de Software e Gameplay Programmer sênior na Unity. Resolva de ponta a ponta os seguintes problemas críticos identificados na versão de teste:
+
+1. Braços e Mãos Empunhando a Arma em Primeira Pessoa (Tactical Viewmodel Arms):
+   - Problema: A arma aparecia flutuando no centro da tela sem qualquer braço ou mão visível empunhando o equipamento.
+   - Solução: Implementar no script `TacticalViewmodelArms.cs` a geração procedural dos braços do operador tático em primeira pessoa (`FPS_Tactical_Arms`), contendo:
+     * Mangas de combate em tecido ripstop tático grafite escuro com shader PBR.
+     * Luvas táticas de combate com reforço rígido nos nós dos dedos (knuckle protectors) e relógio tático no pulso esquerdo.
+     * Mão direita envolvendo a empunhadura (grip) com dedo indicador anatômico curvado no gatilho.
+     * Mão esquerda com postura dinâmica inteligente (`SetWeaponIKStance`):
+       - Pistolas e Revólveres: Envolve a mão direita e o cabo em empunhadura moderna "Two-Handed Isosceles Thumbs-Forward".
+       - Fuzis (AKM) e SMGs: Projeta o braço esquerdo para a frente segurando a telha inferior / handguard da arma.
+     * Sincronização 100% fluida: Como os braços estão vinculados ao `WeaponHolder`, todos os movimentos procedurais de mira (ADS), recuo físico, respiração (sway) e passada de corrida movem a arma e os braços em perfeita harmonia cinematográfica.
+
+2. Correção de Travamento / Congelamento na Troca de Arma (`SwitchEquippedWeapon`):
+   - Problema: Ao selecionar outra arma via menu do Arsenal ou teclas de atalho in-game, o jogo travava ou os scripts colidiam.
+   - Causa: O método `Object.Destroy` em tempo de execução adiava a remoção dos filhos do `WeaponHolder` para o fim do frame, mantendo armas e componentes duplicados coexistindo no mesmo frame com referências cruzadas e nulas.
+   - Solução: No método `SceneGeneratorCore.SwitchEquippedWeapon`, desativar e desvincular imediatamente cada filho antigo (`child.gameObject.SetActive(false); child.SetParent(null); SafeDestroy(child.gameObject);`) antes de instanciar a nova arma, zerando `childCount` no nanosegundo e recalibrando os sockets de mira ADS via `procMotion.CalibrateADSFromSockets()`.
+
+3. Blindagem de Reflexão contra Exceções de Tipo (`ArgumentException`):
+   - Problema: O console emitia `ArgumentException: Object of type 'IPSCSimulator.Player.PlayerController' cannot be converted to type 'UnityEngine.CharacterController'`.
+   - Solução: Blindar o método de reflexão `SetFieldValue` em `SceneGeneratorCore.cs` e `LoadoutMenuManager.cs` com a validação `field.FieldType.IsAssignableFrom(value.GetType())` e bloco `try-catch` protetivo, impedindo que divergências de tipos interrompam a execução do simulador.
+
+4. Correção de Glifos Ausentes no TextMeshPro (LiberationSans SDF):
+   - Problema: Console apresentava dezenas de avisos informando que o caractere Unicode `\u2715` não existia no font asset LiberationSans SDF.
+   - Solução: Substituição definitiva de `\u2715` por `[X]` ASCII padrão compatível com 100% dos font assets.
+
+5. Eliminação de Duplicidade no EventSystem:
+   - Problema: Console exibia `There can be only one active Event System. UnityEngine.EventSystems.EventSystem:OnEnable()`.
+   - Solução: Desativação imediata (`enabled = false`) de instâncias extras do EventSystem antes da destruição, garantindo estrito padrão Singleton em `LoadoutMenuManager.cs`.
+
+6. Fluxo Fluido do Menu de Arsenal e Cursor do Jogador:
+   - Ajustar `LoadoutMenuManager.cs` para iniciar com o menu fechado (`SetMenuOpen(false)`) quando o estande já está ativo na cena, travando o cursor e permitindo que o operador jogue e atire instantaneamente, acessando o arsenal a qualquer momento através da tecla `[B]`.
+================================================================================

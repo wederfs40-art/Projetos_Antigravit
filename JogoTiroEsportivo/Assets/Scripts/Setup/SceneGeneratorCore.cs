@@ -1319,9 +1319,16 @@ namespace IPSCSimulator.Setup
             WeaponHandling handling = holder.GetComponent<WeaponHandling>();
             if (handling == null) handling = holder.AddComponent<WeaponHandling>();
 
+            // Desativa, desvincula e destrói imediatamente todos os filhos antigos da arma para evitar componentes conflitantes
             for (int i = holder.transform.childCount - 1; i >= 0; i--)
             {
-                SafeDestroy(holder.transform.GetChild(i).gameObject);
+                Transform child = holder.transform.GetChild(i);
+                if (child != null)
+                {
+                    child.gameObject.SetActive(false);
+                    child.SetParent(null);
+                    SafeDestroy(child.gameObject);
+                }
             }
 
             GameObject rangeRoot = GameObject.Find("--- IPSC SHOOTING RANGE ---");
@@ -1332,6 +1339,14 @@ namespace IPSCSimulator.Setup
             GameObject bulletObj = bulletTrans != null ? bulletTrans.gameObject : CreateBulletPrefab(decalObj);
 
             AttachSelectedWeapon(holder, handling, bulletObj, decalObj, newWeapon);
+
+            // Recalibra os sockets óticos e miras para a nova arma
+            WeaponProceduralMotion procMotion = holder.GetComponent<WeaponProceduralMotion>();
+            if (procMotion != null)
+            {
+                procMotion.CalibrateADSFromSockets();
+            }
+
             GameplayHUD.Instance?.UpdateWeaponName(newWeapon.ToString().Replace("_", " "));
             Debug.Log($"[Arsenal] Arma equipada alterada para: {newWeapon}");
         }
@@ -1951,8 +1966,26 @@ namespace IPSCSimulator.Setup
 
         private static void SetFieldValue(object target, string fieldName, object value)
         {
-            var field = target.GetType().GetField(fieldName, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
-            if (field != null) field.SetValue(target, value);
+            if (target == null) return;
+            try
+            {
+                var field = target.GetType().GetField(fieldName, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+                if (field != null)
+                {
+                    if (value == null || field.FieldType.IsAssignableFrom(value.GetType()))
+                    {
+                        field.SetValue(target, value);
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[SetFieldValue] Tipo incompatível para '{fieldName}' em '{target.GetType().Name}': esperado '{field.FieldType.Name}', recebido '{value.GetType().Name}'. Atribuição segura ignorada.");
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[SetFieldValue] Falha ao atribuir campo '{fieldName}' em '{target.GetType().Name}': {ex.Message}");
+            }
         }
 
         private static Transform FindChildRecursive(Transform parent, params string[] targetNames)
