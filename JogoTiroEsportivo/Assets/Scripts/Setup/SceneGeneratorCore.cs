@@ -778,9 +778,8 @@ namespace IPSCSimulator.Setup
             {
                 probeObj = new GameObject("Bodycam_Reflection_Probe");
                 ReflectionProbe probe = probeObj.AddComponent<ReflectionProbe>();
-                probe.mode = UnityEngine.Rendering.ReflectionProbeMode.Realtime;
-                probe.refreshMode = UnityEngine.Rendering.ReflectionProbeRefreshMode.OnAwake;
-                probe.timeSlicingMode = UnityEngine.Rendering.ReflectionProbeTimeSlicingMode.AllFacesAtOnce;
+                probe.mode = UnityEngine.Rendering.ReflectionProbeMode.Baked;
+                probe.resolution = 128;
                 probe.size = new Vector3(40f, 15f, 50f);
                 probeObj.transform.position = new Vector3(0, 3f, 15f);
             }
@@ -1556,8 +1555,8 @@ namespace IPSCSimulator.Setup
             {
                 probeObj = new GameObject("CS_Reflection_Probe");
                 ReflectionProbe probe = probeObj.AddComponent<ReflectionProbe>();
-                probe.mode = UnityEngine.Rendering.ReflectionProbeMode.Realtime;
-                probe.refreshMode = UnityEngine.Rendering.ReflectionProbeRefreshMode.OnAwake;
+                probe.mode = UnityEngine.Rendering.ReflectionProbeMode.Baked;
+                probe.resolution = 128;
                 probe.size = new Vector3(50f, 20f, 60f);
                 probeObj.transform.position = new Vector3(0, 2.5f, 16f);
             }

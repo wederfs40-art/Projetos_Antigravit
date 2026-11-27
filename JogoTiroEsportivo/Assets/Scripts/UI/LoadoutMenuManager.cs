@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
@@ -166,7 +168,15 @@ namespace IPSCSimulator.UI
 
         private void EnsureEventSystemExists()
         {
-            if (EventSystem.current == null)
+            EventSystem[] existing = FindObjectsByType<EventSystem>(FindObjectsSortMode.None);
+            if (existing != null && existing.Length > 1)
+            {
+                for (int i = 1; i < existing.Length; i++)
+                {
+                    if (existing[i] != null) Destroy(existing[i].gameObject);
+                }
+            }
+            else if (existing == null || existing.Length == 0)
             {
                 GameObject esObj = new GameObject("EventSystem");
                 esObj.AddComponent<EventSystem>();
@@ -314,7 +324,7 @@ namespace IPSCSimulator.UI
             iconRt.offsetMin = Vector2.zero;
             iconRt.offsetMax = Vector2.zero;
             Image iconImg = iconObj.AddComponent<Image>();
-            iconImg.sprite = (weapon.WeaponIcon != null) ? weapon.WeaponIcon : GetProceduralWeaponSilhouette(weapon.Category, weapon.WeaponName);
+            iconImg.sprite = (weapon.WeaponIcon != null) ? weapon.WeaponIcon : TryLoadWeaponSprite(weapon.WeaponName, weapon.Category);
             iconImg.color = isEquipped ? Color.white : new Color(0.85f, 0.88f, 0.92f, 0.95f);
             iconImg.preserveAspect = true;
             iconImg.raycastTarget = false;
@@ -607,114 +617,349 @@ namespace IPSCSimulator.UI
         }
 
         // ========================================================================================
-        // 6. GERADOR PROCEDURAL DE SILHUETAS TÁTICAS DE ARMAS (QUALIDADE VISUAL CS2)
+        // 6. SISTEMA PROFISSIONAL DE ÍCONES E SILHUETAS TÁTICAS DE ARMAS (ESTILO CS2 / AAA)
         // ========================================================================================
-        private static Sprite GetProceduralWeaponSilhouette(WeaponCategory category, string weaponName)
+
+        /// <summary>
+        /// Assegura que todas as armas cadastradas possuam ícones/sprites válidos,
+        /// carregando imagens reais do projeto ou gerando silhuetas vetoriais suaves.
+        /// </summary>
+        public void EnsureAllWeaponIcons()
         {
-            string key = $"{category}_{weaponName}";
+            if (registeredWeapons == null) return;
+            for (int i = 0; i < registeredWeapons.Count; i++)
+            {
+                var w = registeredWeapons[i];
+                if (w != null && w.WeaponIcon == null)
+                {
+                    Sprite icon = TryLoadWeaponSprite(w.WeaponName, w.Category);
+                    if (icon != null)
+                    {
+                        SetField(w, "weaponIcon", icon);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Tenta carregar a imagem 2D real da arma nos pacotes de textura do projeto com recorte automático;
+        /// se não existir no disco, gera uma silhueta vetorial de alta definição com anti-aliasing.
+        /// </summary>
+        public static Sprite TryLoadWeaponSprite(string weaponName, WeaponCategory category, string explicitPath = null)
+        {
+            if (!string.IsNullOrEmpty(explicitPath))
+            {
+                Sprite sp = LoadWeaponSpriteWithCrop(explicitPath);
+                if (sp != null) return sp;
+            }
+
+            string lower = (weaponName ?? "").ToLower();
+
+            // Mapeamento inteligente para os modelos reais renderizados no projeto (Low Poly Pistol Pack 3)
+            string detectedPath = null;
+            if (category == WeaponCategory.Pistolas)
+            {
+                if (lower.Contains("beretta") && lower.Contains("tan"))
+                    detectedPath = "Assets/Low Poly Pistol Weapon Pack 3/UI/Weapons/Pistol_K_1K_2.png";
+                else if (lower.Contains("beretta") || lower.Contains("m9"))
+                    detectedPath = "Assets/Low Poly Pistol Weapon Pack 3/UI/Weapons/Pistol_K_1K_1.png";
+                else if (lower.Contains("glock"))
+                    detectedPath = "Assets/Low Poly Pistol Weapon Pack 3/UI/Weapons/Pistol_L_1K_1.png";
+                else if (lower.Contains("1911") || lower.Contains("colt"))
+                    detectedPath = "Assets/Low Poly Pistol Weapon Pack 3/UI/Weapons/Pistol_M_1K_1.png";
+                else if (lower.Contains("dan wesson") || lower.Contains("357"))
+                    detectedPath = "Assets/Low Poly Pistol Weapon Pack 3/UI/Weapons/Pistol_N_1K_1.png";
+                else if (lower.Contains("superhawk") || lower.Contains("44"))
+                    detectedPath = "Assets/Low Poly Pistol Weapon Pack 3/UI/Weapons/Pistol_O_1K_1.png";
+            }
+
+            if (!string.IsNullOrEmpty(detectedPath))
+            {
+                Sprite sp = LoadWeaponSpriteWithCrop(detectedPath);
+                if (sp != null) return sp;
+            }
+
+            // Fallback: Silhueta vetorial anti-aliased estilizada e detalhada
+            return GetProceduralWeaponSilhouette(category, weaponName);
+        }
+
+        /// <summary>
+        /// Carrega um arquivo PNG de arma do disco e realiza o recorte automático (Tight Bounding Box)
+        /// das margens transparentes, fazendo a arma preencher o card com máxima nitidez e tamanho.
+        /// </summary>
+        public static Sprite LoadWeaponSpriteWithCrop(string relativeAssetPath)
+        {
+            if (string.IsNullOrEmpty(relativeAssetPath)) return null;
+
+            string key = $"SpriteFile_{relativeAssetPath}";
             if (_proceduralSpriteCache.TryGetValue(key, out Sprite cached)) return cached;
 
-            int width = 256;
-            int height = 128;
+#if UNITY_EDITOR
+            // Tenta obter sub-assets do AssetDatabase primeiro se for Multiple Sprite
+            var allAssets = UnityEditor.AssetDatabase.LoadAllAssetsAtPath(relativeAssetPath);
+            if (allAssets != null)
+            {
+                foreach (var a in allAssets)
+                {
+                    if (a is Sprite editorSprite)
+                    {
+                        _proceduralSpriteCache[key] = editorSprite;
+                        return editorSprite;
+                    }
+                }
+            }
+#endif
+
+            // Fallback direto em disco (lê os bytes e recorta o enquadramento exato da arma)
+            string fullPath = Path.Combine(Directory.GetCurrentDirectory(), relativeAssetPath);
+            if (!File.Exists(fullPath)) return null;
+
+            try
+            {
+                byte[] bytes = File.ReadAllBytes(fullPath);
+                Texture2D tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                if (tex.LoadImage(bytes))
+                {
+                    Color32[] pixels = tex.GetPixels32();
+                    int w = tex.width;
+                    int h = tex.height;
+                    int minX = w, maxX = 0, minY = h, maxY = 0;
+                    bool foundAny = false;
+
+                    for (int y = 0; y < h; y++)
+                    {
+                        int row = y * w;
+                        for (int x = 0; x < w; x++)
+                        {
+                            if (pixels[row + x].a > 25)
+                            {
+                                if (x < minX) minX = x;
+                                if (x > maxX) maxX = x;
+                                if (y < minY) minY = y;
+                                if (y > maxY) maxY = y;
+                                foundAny = true;
+                            }
+                        }
+                    }
+
+                    // Se encontrou a arma, recorta com pequena margem estética de respiro
+                    int pad = 8;
+                    int cropX = Mathf.Max(0, minX - pad);
+                    int cropY = Mathf.Max(0, minY - pad);
+                    int cropW = Mathf.Min(w - cropX, (maxX - minX + 1) + pad * 2);
+                    int cropH = Mathf.Min(h - cropY, (maxY - minY + 1) + pad * 2);
+
+                    Rect rect = foundAny ? new Rect(cropX, cropY, cropW, cropH) : new Rect(0, 0, w, h);
+                    Sprite sp = Sprite.Create(tex, rect, new Vector2(0.5f, 0.5f), 100f);
+                    sp.name = Path.GetFileNameWithoutExtension(relativeAssetPath);
+                    _proceduralSpriteCache[key] = sp;
+                    return sp;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[LoadoutMenuManager] Falha ao carregar sprite de '{relativeAssetPath}': {ex.Message}");
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Gera uma silhueta vetorial profissional em alta resolução (512x256) com anti-aliasing,
+        /// contornos anatômicos fiéis da arma e gradientes sutis de iluminação metálica.
+        /// </summary>
+        private static Sprite GetProceduralWeaponSilhouette(WeaponCategory category, string weaponName)
+        {
+            string key = $"Silhouette_{category}_{weaponName}";
+            if (_proceduralSpriteCache.TryGetValue(key, out Sprite cached)) return cached;
+
+            int width = 512;
+            int height = 256;
             Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
             Color[] pixels = new Color[width * height];
             for (int i = 0; i < pixels.Length; i++) pixels[i] = Color.clear;
 
-            Color gunColor = new Color(0.92f, 0.94f, 0.98f, 1f);
-            Color barrelColor = new Color(0.70f, 0.75f, 0.82f, 1f);
-            Color highlightColor = new Color(1f, 0.85f, 0.35f, 1f);
+            Color bodyMetal = new Color(0.88f, 0.91f, 0.96f, 0.95f);
+            Color barrelSteel = new Color(0.68f, 0.74f, 0.82f, 0.95f);
+            Color accentGold = new Color(1f, 0.82f, 0.35f, 0.95f);
+            Color darkWood = new Color(0.72f, 0.44f, 0.22f, 0.95f);
+            Color gripColor = new Color(0.20f, 0.22f, 0.26f, 0.95f);
+
+            string lower = (weaponName ?? "").ToLower();
 
             switch (category)
             {
                 case WeaponCategory.Pistolas:
-                    // Slide superior da pistola
-                    FillRect(pixels, width, 55, 62, 145, 26, gunColor);
-                    // Cano frontal
-                    FillRect(pixels, width, 200, 68, 20, 14, barrelColor);
-                    // Empunhadura (Grip) inclinada
-                    FillRect(pixels, width, 75, 20, 36, 44, gunColor);
-                    // Guarda-mato e gatilho
-                    FillRect(pixels, width, 111, 46, 26, 18, barrelColor);
-                    FillRect(pixels, width, 114, 50, 18, 10, Color.clear);
-                    // Detalhe de serrilhado do slide
-                    FillRect(pixels, width, 60, 68, 12, 14, highlightColor);
+                    if (lower.Contains("357") || lower.Contains("44") || lower.Contains("wesson") || lower.Contains("hawk"))
+                    {
+                        // Revólver Magnum (.357 / .44)
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(245, 142), new Vector2(430, 142), 14f, barrelSteel); // Cano longo pesado
+                        DrawSmoothRoundedBox(pixels, width, height, 335, 156, 90, 6, 2f, barrelSteel); // Nervura ventilada do cano
+                        DrawSmoothRoundedBox(pixels, width, height, 220, 140, 36, 26, 8f, bodyMetal); // Tambor do cilindro
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(175, 148), new Vector2(150, 60), 18f, darkWood); // Empunhadura de madeira
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(178, 160), new Vector2(165, 172), 5f, accentGold); // Cão / Martelo (Hammer)
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(195, 122), new Vector2(230, 105), 4f, barrelSteel); // Guarda-mato
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(230, 105), new Vector2(235, 130), 4f, barrelSteel);
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(212, 130), new Vector2(208, 115), 3f, accentGold); // Gatilho
+                    }
+                    else
+                    {
+                        // Pistola Tática Semiautomática (Beretta / Glock / 1911)
+                        DrawSmoothRoundedBox(pixels, width, height, 260, 155, 130, 22, 6f, bodyMetal); // Ferrolho (Slide)
+                        DrawSmoothRoundedBox(pixels, width, height, 395, 153, 16, 12, 2f, barrelSteel); // Ponta do cano
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(195, 150), new Vector2(160, 55), 22f, gripColor); // Grip empunhadura
+                        DrawSmoothRoundedBox(pixels, width, height, 155, 48, 22, 6, 3f, barrelSteel); // Baseplate do carregador
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(220, 138), new Vector2(265, 115), 5f, barrelSteel); // Guarda-mato
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(265, 115), new Vector2(275, 144), 5f, barrelSteel);
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(242, 142), new Vector2(238, 124), 4f, accentGold); // Gatilho
+                        DrawSmoothRoundedBox(pixels, width, height, 145, 174, 5, 6, 2f, accentGold); // Alça de mira
+                        DrawSmoothRoundedBox(pixels, width, height, 375, 174, 4, 6, 2f, accentGold); // Massa de mira
+                    }
                     break;
 
                 case WeaponCategory.Submetralhadoras:
-                    // Receptor central
-                    FillRect(pixels, width, 50, 56, 130, 32, gunColor);
-                    // Cano e supressor
-                    FillRect(pixels, width, 180, 62, 45, 18, barrelColor);
-                    // Magazine curvo/reto para baixo
-                    FillRect(pixels, width, 130, 16, 22, 44, highlightColor);
-                    // Coronha rebatível traseira
-                    FillRect(pixels, width, 25, 62, 28, 12, barrelColor);
-                    // Empunhadura
-                    FillRect(pixels, width, 70, 22, 30, 36, gunColor);
+                    if (lower.Contains("p90"))
+                    {
+                        // P90 Bullpup anatômica
+                        DrawSmoothRoundedBox(pixels, width, height, 255, 135, 140, 36, 16f, bodyMetal); // Corpo ergonômico
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(185, 125), new Vector2(165, 65), 18f, gripColor); // Empunhadura traseira
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(265, 125), new Vector2(250, 75), 16f, gripColor); // Foregrip dianteiro
+                        DrawSmoothRoundedBox(pixels, width, height, 275, 168, 115, 10, 3f, accentGold); // Carregador horizontal translúcido
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(395, 142), new Vector2(430, 142), 8f, barrelSteel); // Boca do cano
+                    }
+                    else
+                    {
+                        // MP5 / UMP / Submetralhadora Tática
+                        DrawSmoothRoundedBox(pixels, width, height, 245, 148, 115, 24, 6f, bodyMetal); // Receptor central
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(360, 150), new Vector2(435, 150), 10f, barrelSteel); // Cano / Supressor
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(295, 138), new Vector2(275, 42), 12f, accentGold); // Magazine curvo
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(195, 138), new Vector2(170, 60), 18f, gripColor); // Empunhadura
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(130, 154), new Vector2(60, 154), 5f, barrelSteel); // Hastes coronha
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(60, 125), new Vector2(60, 175), 8f, bodyMetal); // Soleira
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(420, 162), new Vector2(420, 172), 3f, accentGold); // Massa com anel
+                    }
                     break;
 
                 case WeaponCategory.Fuzis:
-                    // Caixa de culatra e tampa do receptor
-                    FillRect(pixels, width, 65, 54, 110, 30, gunColor);
-                    // Guarda-mão de madeira/polímero
-                    FillRect(pixels, width, 175, 58, 45, 22, new Color(0.85f, 0.55f, 0.25f));
-                    // Cano longo e quebra-chamas
-                    FillRect(pixels, width, 220, 64, 25, 10, barrelColor);
-                    // Magazine curvo estilo banana (AKM)
-                    FillRect(pixels, width, 125, 14, 26, 44, highlightColor);
-                    // Coronha traseira
-                    FillRect(pixels, width, 20, 48, 48, 30, new Color(0.85f, 0.55f, 0.25f));
-                    // Empunhadura
-                    FillRect(pixels, width, 75, 24, 26, 32, gunColor);
+                    if (lower.Contains("akm") || lower.Contains("ak"))
+                    {
+                        // AKM 7.62x39mm (Madeira e Aço Estampado)
+                        DrawSmoothRoundedBox(pixels, width, height, 245, 148, 95, 24, 4f, bodyMetal); // Culatra
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(150, 148), new Vector2(60, 120), 18f, darkWood); // Coronha de madeira
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(340, 152), new Vector2(415, 152), 14f, darkWood); // Guarda-mão de madeira
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(415, 152), new Vector2(465, 152), 7f, barrelSteel); // Cano
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(445, 155), new Vector2(445, 176), 4f, bodyMetal); // Torre da massa
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(285, 136), new Vector2(265, 80), 15f, accentGold); // Magazine Banana
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(265, 80), new Vector2(245, 36), 15f, accentGold);
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(195, 138), new Vector2(175, 65), 15f, darkWood); // Pistolgrip
+                    }
+                    else
+                    {
+                        // M4A1 Carabina Tática
+                        DrawSmoothRoundedBox(pixels, width, height, 235, 152, 90, 22, 5f, bodyMetal); // Upper/Lower
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(145, 152), new Vector2(65, 145), 16f, gripColor); // Coronha telescópica
+                        DrawSmoothRoundedBox(pixels, width, height, 360, 152, 55, 16, 4f, gripColor); // Guarda-mão picatinny
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(415, 152), new Vector2(460, 152), 7f, barrelSteel); // Cano
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(415, 155), new Vector2(415, 180), 4f, bodyMetal); // A-Frame sight
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(265, 140), new Vector2(252, 50), 14f, barrelSteel); // STANAG Mag
+                        DrawSmoothCapsule(pixels, width, height, new Vector2(185, 140), new Vector2(165, 68), 16f, gripColor); // Punho A2
+                    }
                     break;
 
                 case WeaponCategory.Espingardas:
-                    // Receptor robusto
-                    FillRect(pixels, width, 60, 52, 90, 28, gunColor);
-                    // Cano de alma lisa longo
-                    FillRect(pixels, width, 150, 60, 85, 14, barrelColor);
-                    // Telha / Bomba de pump-action
-                    FillRect(pixels, width, 165, 46, 42, 16, highlightColor);
-                    // Coronha
-                    FillRect(pixels, width, 20, 42, 45, 32, gunColor);
+                    // Espingarda Tática 12GA Pump Action
+                    DrawSmoothCapsule(pixels, width, height, new Vector2(240, 152), new Vector2(465, 152), 10f, barrelSteel); // Cano longo
+                    DrawSmoothCapsule(pixels, width, height, new Vector2(250, 138), new Vector2(410, 138), 9f, barrelSteel); // Tubo de depósito
+                    DrawSmoothRoundedBox(pixels, width, height, 330, 138, 45, 13, 5f, accentGold); // Telha / Pump forend
+                    DrawSmoothRoundedBox(pixels, width, height, 220, 146, 50, 22, 6f, bodyMetal); // Caixa de culatra
+                    DrawSmoothCapsule(pixels, width, height, new Vector2(170, 144), new Vector2(60, 118), 20f, gripColor); // Coronha robusta
                     break;
 
                 case WeaponCategory.Snipers:
-                    // Corpo esguio e longo
-                    FillRect(pixels, width, 50, 50, 110, 24, gunColor);
-                    // Cano pesado de precisão extra longo
-                    FillRect(pixels, width, 160, 56, 85, 12, barrelColor);
-                    // Luneta telescópica (Scope) montada no trilho superior
-                    FillRect(pixels, width, 90, 80, 75, 18, highlightColor);
-                    FillRect(pixels, width, 110, 74, 35, 8, barrelColor);
-                    // Coronha ergonômica com apoio de bochecha
-                    FillRect(pixels, width, 15, 42, 40, 28, gunColor);
+                    // Fuzil de Precisão Sniper (AWP / CheyTac M200)
+                    DrawSmoothCapsule(pixels, width, height, new Vector2(210, 146), new Vector2(480, 146), 9f, barrelSteel); // Cano pesado
+                    DrawSmoothRoundedBox(pixels, width, height, 270, 182, 70, 12, 3f, bodyMetal); // Tubo da luneta
+                    DrawSmoothRoundedBox(pixels, width, height, 205, 182, 15, 18, 4f, barrelSteel); // Ocular bell
+                    DrawSmoothRoundedBox(pixels, width, height, 335, 182, 18, 20, 5f, barrelSteel); // Lente objetiva
+                    DrawSmoothCapsule(pixels, width, height, new Vector2(240, 160), new Vector2(240, 174), 4f, accentGold); // Suporte anel 1
+                    DrawSmoothCapsule(pixels, width, height, new Vector2(300, 160), new Vector2(300, 174), 4f, accentGold); // Suporte anel 2
+                    DrawSmoothRoundedBox(pixels, width, height, 230, 142, 60, 20, 5f, bodyMetal); // Ação/Chassi
+                    DrawSmoothCapsule(pixels, width, height, new Vector2(170, 140), new Vector2(65, 125), 18f, darkWood); // Coronha sniper
+                    DrawSmoothRoundedBox(pixels, width, height, 260, 105, 18, 22, 3f, barrelSteel); // Carregador destacável
+                    DrawSmoothCapsule(pixels, width, height, new Vector2(415, 140), new Vector2(430, 95), 4f, barrelSteel); // Bipé retraído
                     break;
 
                 default: // Equipamentos / Granadas
-                    FillRect(pixels, width, 100, 35, 55, 60, new Color(0.25f, 0.65f, 0.35f));
-                    FillRect(pixels, width, 118, 95, 20, 16, highlightColor);
-                    FillRect(pixels, width, 108, 102, 38, 6, barrelColor);
+                    DrawSmoothRoundedBox(pixels, width, height, 256, 120, 36, 46, 20f, new Color(0.25f, 0.65f, 0.35f, 0.95f)); // Corpo cilíndrico
+                    DrawSmoothRoundedBox(pixels, width, height, 256, 172, 14, 12, 4f, barrelSteel); // Esvoacador / Fusível
+                    DrawSmoothCapsule(pixels, width, height, new Vector2(252, 180), new Vector2(220, 125), 5f, accentGold); // Alavanca (Spoon)
+                    DrawSmoothCapsule(pixels, width, height, new Vector2(236, 175), new Vector2(226, 182), 4f, barrelSteel); // Argola
                     break;
             }
 
             tex.SetPixels(pixels);
             tex.Apply();
             Sprite sprite = Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f), 100f);
+            sprite.name = key;
             _proceduralSpriteCache[key] = sprite;
             return sprite;
         }
 
-        private static void FillRect(Color[] pixels, int width, int x, int y, int w, int h, Color col)
+        private static void DrawSmoothCapsule(Color[] pixels, int width, int height, Vector2 p0, Vector2 p1, float radius, Color col)
         {
-            int texHeight = pixels.Length / width;
-            for (int cy = y; cy < y + h; cy++)
+            float minX = Mathf.Clamp(Mathf.Min(p0.x, p1.x) - radius - 2, 0, width - 1);
+            float maxX = Mathf.Clamp(Mathf.Max(p0.x, p1.x) + radius + 2, 0, width - 1);
+            float minY = Mathf.Clamp(Mathf.Min(p0.y, p1.y) - radius - 2, 0, height - 1);
+            float maxY = Mathf.Clamp(Mathf.Max(p0.y, p1.y) + radius + 2, 0, height - 1);
+
+            Vector2 d = p1 - p0;
+            float l2 = d.sqrMagnitude;
+
+            for (int y = (int)minY; y <= (int)maxY; y++)
             {
-                if (cy < 0 || cy >= texHeight) continue;
-                for (int cx = x; cx < x + w; cx++)
+                int row = y * width;
+                for (int x = (int)minX; x <= (int)maxX; x++)
                 {
-                    if (cx < 0 || cx >= width) continue;
-                    pixels[cy * width + cx] = col;
+                    Vector2 p = new Vector2(x + 0.5f, y + 0.5f);
+                    float t = l2 > 0.0001f ? Mathf.Clamp01(Vector2.Dot(p - p0, d) / l2) : 0f;
+                    Vector2 proj = p0 + t * d;
+                    float dist = Vector2.Distance(p, proj);
+                    float alpha = Mathf.Clamp01(radius + 0.5f - dist);
+                    if (alpha > 0.01f)
+                    {
+                        Color prev = pixels[row + x];
+                        Color blended = Color.Lerp(prev, col, alpha * col.a);
+                        pixels[row + x] = blended;
+                    }
+                }
+            }
+        }
+
+        private static void DrawSmoothRoundedBox(Color[] pixels, int width, int height, float cx, float cy, float halfW, float halfH, float r, Color col)
+        {
+            float minX = Mathf.Clamp(cx - halfW - 2, 0, width - 1);
+            float maxX = Mathf.Clamp(cx + halfW + 2, 0, width - 1);
+            float minY = Mathf.Clamp(cy - halfH - 2, 0, height - 1);
+            float maxY = Mathf.Clamp(cy + halfH + 2, 0, height - 1);
+
+            for (int y = (int)minY; y <= (int)maxY; y++)
+            {
+                int row = y * width;
+                for (int x = (int)minX; x <= (int)maxX; x++)
+                {
+                    float px = x + 0.5f;
+                    float py = y + 0.5f;
+                    float qx = Mathf.Abs(px - cx) - (halfW - r);
+                    float qy = Mathf.Abs(py - cy) - (halfH - r);
+                    float dist = Mathf.Max(qx, qy);
+                    if (qx > 0 && qy > 0) dist = Mathf.Sqrt(qx * qx + qy * qy);
+                    float alpha = Mathf.Clamp01(r + 0.5f - dist);
+                    if (alpha > 0.01f)
+                    {
+                        Color prev = pixels[row + x];
+                        Color blended = Color.Lerp(prev, col, alpha * col.a);
+                        pixels[row + x] = blended;
+                    }
                 }
             }
         }
@@ -726,17 +971,18 @@ namespace IPSCSimulator.UI
         {
             if (registeredWeapons.Count > 0)
             {
+                EnsureAllWeaponIcons();
                 if (_selectedWeaponData == null) _selectedWeaponData = registeredWeapons[0];
                 return;
             }
 
-            // Pistolas
-            registeredWeapons.Add(CreateDefaultData("Beretta M9T (Black)", WeaponCategory.Pistolas, 52f, 85f, 55f));
-            registeredWeapons.Add(CreateDefaultData("Beretta M9T (Tan)", WeaponCategory.Pistolas, 52f, 85f, 55f));
-            registeredWeapons.Add(CreateDefaultData("Glock 17 Tactical", WeaponCategory.Pistolas, 48f, 82f, 62f));
-            registeredWeapons.Add(CreateDefaultData("Colt 1911 Custom", WeaponCategory.Pistolas, 65f, 75f, 45f));
-            registeredWeapons.Add(CreateDefaultData("Dan Wesson 715 .357", WeaponCategory.Pistolas, 78f, 90f, 30f));
-            registeredWeapons.Add(CreateDefaultData("Superhawk .44 Mag", WeaponCategory.Pistolas, 88f, 84f, 25f));
+            // Pistolas (Carregadas com imagens reais recortadas dos pacotes 3D do projeto)
+            registeredWeapons.Add(CreateDefaultData("Beretta M9T (Black)", WeaponCategory.Pistolas, 52f, 85f, 55f, "Assets/Low Poly Pistol Weapon Pack 3/UI/Weapons/Pistol_K_1K_1.png"));
+            registeredWeapons.Add(CreateDefaultData("Beretta M9T (Tan)", WeaponCategory.Pistolas, 52f, 85f, 55f, "Assets/Low Poly Pistol Weapon Pack 3/UI/Weapons/Pistol_K_1K_2.png"));
+            registeredWeapons.Add(CreateDefaultData("Glock 17 Tactical", WeaponCategory.Pistolas, 48f, 82f, 62f, "Assets/Low Poly Pistol Weapon Pack 3/UI/Weapons/Pistol_L_1K_1.png"));
+            registeredWeapons.Add(CreateDefaultData("Colt 1911 Custom", WeaponCategory.Pistolas, 65f, 75f, 45f, "Assets/Low Poly Pistol Weapon Pack 3/UI/Weapons/Pistol_M_1K_1.png"));
+            registeredWeapons.Add(CreateDefaultData("Dan Wesson 715 .357", WeaponCategory.Pistolas, 78f, 90f, 30f, "Assets/Low Poly Pistol Weapon Pack 3/UI/Weapons/Pistol_N_1K_1.png"));
+            registeredWeapons.Add(CreateDefaultData("Superhawk .44 Mag", WeaponCategory.Pistolas, 88f, 84f, 25f, "Assets/Low Poly Pistol Weapon Pack 3/UI/Weapons/Pistol_O_1K_1.png"));
 
             // Submetralhadoras
             registeredWeapons.Add(CreateDefaultData("MP5 Strongarm", WeaponCategory.Submetralhadoras, 55f, 78f, 85f));
@@ -760,10 +1006,11 @@ namespace IPSCSimulator.UI
             registeredWeapons.Add(CreateDefaultData("Granada Flashbang", WeaponCategory.Equipamentos, 10f, 90f, 10f));
             registeredWeapons.Add(CreateDefaultData("Granada de Fumaça", WeaponCategory.Equipamentos, 0f, 95f, 10f));
 
+            EnsureAllWeaponIcons();
             _selectedWeaponData = registeredWeapons[0];
         }
 
-        private WeaponData CreateDefaultData(string name, WeaponCategory cat, float dmg, float acc, float rate)
+        private WeaponData CreateDefaultData(string name, WeaponCategory cat, float dmg, float acc, float rate, string iconPath = null)
         {
             WeaponData w = ScriptableObject.CreateInstance<WeaponData>();
             w.name = $"Data_{name.Replace(" ", "_")}";
@@ -777,6 +1024,9 @@ namespace IPSCSimulator.UI
             SetField(w, "adsLocalRotation", new Vector3(-3.2f, 0f, 0f));
             SetField(w, "adsSpeed", 14f);
             SetField(w, "adsCameraFOV", 48f);
+
+            Sprite icon = TryLoadWeaponSprite(name, cat, iconPath);
+            if (icon != null) SetField(w, "weaponIcon", icon);
 
             return w;
         }
@@ -799,12 +1049,20 @@ namespace IPSCSimulator.UI
                 if (ex != null) DestroyImmediate(ex.gameObject);
             }
 
-            // Garante EventSystem
-            if (EventSystem.current == null)
+            // Garante EventSystem único
+            EventSystem[] existingES = FindObjectsByType<EventSystem>(FindObjectsSortMode.None);
+            if (existingES == null || existingES.Length == 0)
             {
                 GameObject esObj = new GameObject("EventSystem");
                 esObj.AddComponent<EventSystem>();
                 esObj.AddComponent<StandaloneInputModule>();
+            }
+            else if (existingES.Length > 1)
+            {
+                for (int i = 1; i < existingES.Length; i++)
+                {
+                    if (existingES[i] != null) DestroyImmediate(existingES[i].gameObject);
+                }
             }
 
             // Canvas Raiz
