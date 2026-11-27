@@ -1174,6 +1174,79 @@ namespace IPSCSimulator.Setup
             SetFieldValue(weapon, "slideLockSound", ProceduralAudio.CreateSlideLockClip());
             SetFieldValue(weapon, "hitLayers", (LayerMask)(~0));
 
+            // Criação dos Sockets de Alinhamento de Mira Óptica (Front Sight e Rear Sight)
+            GameObject frontSightObj = new GameObject("FrontSightSocket");
+            GameObject rearSightObj = new GameObject("RearSightSocket");
+
+            switch (weaponType)
+            {
+                case SelectedWeaponType.Pistol_Beretta_M9T_Black:
+                case SelectedWeaponType.Pistol_Beretta_M9T_Tan:
+                    frontSightObj.transform.SetParent(slideObj != null ? slideObj : gunRoot.transform);
+                    frontSightObj.transform.localPosition = new Vector3(0f, 0.0925f, 0.0222f);
+                    frontSightObj.transform.localRotation = Quaternion.identity;
+                    rearSightObj.transform.SetParent(slideObj != null ? slideObj : gunRoot.transform);
+                    rearSightObj.transform.localPosition = new Vector3(0f, 0.0905f, -0.0189f);
+                    rearSightObj.transform.localRotation = Quaternion.identity;
+                    break;
+
+                case SelectedWeaponType.Pistol_Tactical_Glock:
+                case SelectedWeaponType.Pistol_Combat_Custom:
+                    frontSightObj.transform.SetParent(slideObj != null ? slideObj : gunRoot.transform);
+                    frontSightObj.transform.localPosition = new Vector3(0f, 0.038f, 0.12f);
+                    frontSightObj.transform.localRotation = Quaternion.identity;
+                    rearSightObj.transform.SetParent(slideObj != null ? slideObj : gunRoot.transform);
+                    rearSightObj.transform.localPosition = new Vector3(0f, 0.038f, -0.04f);
+                    rearSightObj.transform.localRotation = Quaternion.identity;
+                    break;
+
+                case SelectedWeaponType.Revolver_DanWesson_357:
+                case SelectedWeaponType.Revolver_Superhawk_Tactical:
+                    frontSightObj.transform.SetParent(gunRoot.transform);
+                    frontSightObj.transform.localPosition = new Vector3(0f, 0.045f, 0.20f);
+                    frontSightObj.transform.localRotation = Quaternion.identity;
+                    rearSightObj.transform.SetParent(gunRoot.transform);
+                    rearSightObj.transform.localPosition = new Vector3(0f, 0.042f, -0.04f);
+                    rearSightObj.transform.localRotation = Quaternion.identity;
+                    break;
+
+                case SelectedWeaponType.SMG_Strongarm_Tactical:
+                case SelectedWeaponType.SMG_MP_Vector:
+                case SelectedWeaponType.SMG_P90_Compact:
+                    frontSightObj.transform.SetParent(gunRoot.transform);
+                    frontSightObj.transform.localPosition = new Vector3(0f, 0.052f, 0.28f);
+                    frontSightObj.transform.localRotation = Quaternion.identity;
+                    rearSightObj.transform.SetParent(gunRoot.transform);
+                    rearSightObj.transform.localPosition = new Vector3(0f, 0.050f, 0.05f);
+                    rearSightObj.transform.localRotation = Quaternion.identity;
+                    break;
+
+                case SelectedWeaponType.Rifle_AKM_Tactical:
+                    frontSightObj.transform.SetParent(gunRoot.transform);
+                    frontSightObj.transform.localPosition = new Vector3(0f, 0.065f, 0.42f);
+                    frontSightObj.transform.localRotation = Quaternion.identity;
+                    rearSightObj.transform.SetParent(gunRoot.transform);
+                    rearSightObj.transform.localPosition = new Vector3(0f, 0.058f, 0.14f);
+                    rearSightObj.transform.localRotation = Quaternion.identity;
+                    break;
+
+                default: // Modelo procedural
+                    frontSightObj.transform.SetParent(slideObj != null ? slideObj : gunRoot.transform);
+                    frontSightObj.transform.localPosition = new Vector3(0f, 0.72f, 0.44f);
+                    frontSightObj.transform.localRotation = Quaternion.identity;
+                    rearSightObj.transform.SetParent(slideObj != null ? slideObj : gunRoot.transform);
+                    rearSightObj.transform.localPosition = new Vector3(0f, 0.68f, -0.44f);
+                    rearSightObj.transform.localRotation = Quaternion.identity;
+                    break;
+            }
+
+            Camera mainCam = Camera.main;
+
+            SetFieldValue(weapon, "frontSightSocket", frontSightObj.transform);
+            SetFieldValue(weapon, "rearSightSocket", rearSightObj.transform);
+            if (mainCam != null) SetFieldValue(weapon, "playerCamera", mainCam);
+            SetFieldValue(weapon, "fireFromCameraCenter", true);
+
             // Atribui o carregador para animação física de recarga se encontrado
             if (magObj != null)
             {
@@ -1191,6 +1264,8 @@ namespace IPSCSimulator.Setup
             WeaponProceduralMotion procMotion = holder.GetComponent<WeaponProceduralMotion>();
             if (procMotion == null) procMotion = holder.AddComponent<WeaponProceduralMotion>();
 
+            procMotion.SetSightSockets(frontSightObj.transform, rearSightObj.transform, 0.18f);
+
             WeaponData wData = ScriptableObject.CreateInstance<WeaponData>();
             wData.name = $"Data_{weaponType}";
             SetFieldValue(wData, "weaponName", weaponType.ToString().Replace("_", " "));
@@ -1205,9 +1280,8 @@ namespace IPSCSimulator.Setup
 
             procMotion.ConfigureStance(wData, hipPos);
             SetFieldValue(procMotion, "weaponTransform", holder.transform);
-
-            Camera mainCam = Camera.main;
             if (mainCam != null) SetFieldValue(procMotion, "playerCamera", mainCam);
+            procMotion.CalibrateADSFromSockets();
 
             CharacterController charCtrl = holder.GetComponentInParent<CharacterController>();
             if (charCtrl != null) SetFieldValue(procMotion, "characterController", charCtrl);

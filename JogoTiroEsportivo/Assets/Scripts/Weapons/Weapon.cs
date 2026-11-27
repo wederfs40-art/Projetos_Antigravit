@@ -24,6 +24,16 @@ namespace IPSCSimulator.Weapons
         [SerializeField] private float gravityMultiplier = 1f;
         [SerializeField] private LayerMask hitLayers = ~0; // Garante que atinge todas as camadas
 
+        [Header("Alinhamento de Mira & Vetor de Disparo")]
+        [Tooltip("Ponto de referência (socket) na ponta da massa de mira (Front Sight).")]
+        [SerializeField] private Transform frontSightSocket;
+        [Tooltip("Ponto de referência (socket) no entalhe da alça de mira (Rear Sight).")]
+        [SerializeField] private Transform rearSightSocket;
+        [Tooltip("Câmera do jogador para disparos e alinhamento axial com o centro óptico.")]
+        [SerializeField] private Camera playerCamera;
+        [Tooltip("Garante que o vetor de disparo saia exatamente do centro da câmera no alinhamento das miras, sem inclinação para baixo.")]
+        [SerializeField] private bool fireFromCameraCenter = true;
+
         [Header("Capacidade e Ferrolho")]
         [SerializeField] private int magazineCapacity = 17;
         [SerializeField] private int currentAmmo = 17;
@@ -56,6 +66,11 @@ namespace IPSCSimulator.Weapons
         public bool IsSlideLocked => _isSlideLocked;
         public bool IsReloading => _isReloading;
 
+        public Transform FrontSightSocket { get => frontSightSocket; set => frontSightSocket = value; }
+        public Transform RearSightSocket { get => rearSightSocket; set => rearSightSocket = value; }
+        public Camera PlayerCamera { get => playerCamera; set => playerCamera = value; }
+        public bool FireFromCameraCenter { get => fireFromCameraCenter; set => fireFromCameraCenter = value; }
+
         public void ConfigureWeapon(int capacity, float velocity, float gravity = 1f)
         {
             magazineCapacity = capacity;
@@ -69,6 +84,11 @@ namespace IPSCSimulator.Weapons
 
         private void Awake()
         {
+            if (playerCamera == null)
+            {
+                playerCamera = GetComponentInParent<Camera>() ?? Camera.main;
+            }
+
             if (slideTransform != null)
                 _slideOriginalLocalPosition = slideTransform.localPosition;
 
@@ -92,11 +112,16 @@ namespace IPSCSimulator.Weapons
 
         private void Start()
         {
+            if (playerCamera == null)
+            {
+                playerCamera = GetComponentInParent<Camera>() ?? Camera.main;
+            }
             OnAmmoChanged?.Invoke(currentAmmo, magazineCapacity);
         }
 
         /// <summary>
         /// Aciona o mecanismo de disparo da arma.
+        /// Garante que o vetor de disparo saia exatamente do centro da câmera no alinhamento das miras, sem inclinação para baixo.
         /// </summary>
         public bool TryFire()
         {
@@ -121,22 +146,35 @@ namespace IPSCSimulator.Weapons
                 if (muzzlePoint == null) muzzlePoint = transform;
             }
 
-            // 2. Instancia o projétil no cano (Muzzle Point) e garante que esteja ATIVO na cena
+            if (playerCamera == null)
+            {
+                playerCamera = GetComponentInParent<Camera>() ?? Camera.main;
+            }
+
+            // Determina a origem e a direção de disparo:
+            // Alinhado ao centro da câmera e ao eixo óptico da visada (sem inclinação para baixo)
+            Vector3 shootOrigin = (playerCamera != null) ? playerCamera.transform.position : muzzlePoint.position;
+            Vector3 shootDir = (playerCamera != null) ? playerCamera.transform.forward : muzzlePoint.forward;
+
+            // 2. Instancia o projétil no centro óptico da câmera ou cano e garante que esteja ATIVO na cena
             if (bulletPrefab != null)
             {
-                GameObject bulletObj = Instantiate(bulletPrefab, muzzlePoint.position, muzzlePoint.rotation);
+                // Se disparando pelo centro da câmera, spawna logo à frente da lente para trajetória limpa
+                Vector3 spawnPos = (fireFromCameraCenter && playerCamera != null)
+                    ? (playerCamera.transform.position + playerCamera.transform.forward * 0.20f)
+                    : muzzlePoint.position;
+
+                GameObject bulletObj = Instantiate(bulletPrefab, spawnPos, Quaternion.LookRotation(shootDir));
                 bulletObj.SetActive(true); // Impede que o projétil nasça desativado
                 Bullet bulletScript = bulletObj.GetComponent<Bullet>();
                 if (bulletScript != null)
                 {
-                    bulletScript.Initialize(muzzleVelocity, muzzlePoint.forward, gravityMultiplier, bulletHoleDecalPrefab, hitLayers);
+                    bulletScript.Initialize(muzzleVelocity, shootDir, gravityMultiplier, bulletHoleDecalPrefab, hitLayers);
                 }
             }
             else
             {
                 // Fallback instantâneo direto de Raycast caso o prefab do projétil não esteja presente
-                Vector3 shootOrigin = muzzlePoint.position;
-                Vector3 shootDir = muzzlePoint.forward;
                 RaycastHit[] hits = Physics.RaycastAll(shootOrigin, shootDir, 250f, hitLayers, QueryTriggerInteraction.Collide);
                 if (hits != null && hits.Length > 0)
                 {

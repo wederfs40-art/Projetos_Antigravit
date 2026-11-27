@@ -32,12 +32,29 @@ namespace IPSCSimulator.Weapons
         [Tooltip("Rotação base da arma em graus.")]
         [SerializeField] private Vector3 hipRotation = Vector3.zero;
 
+        [Header("Sockets de Mira Óptica (Iron Sights Alignment)")]
+        [Tooltip("Ponto de referência (socket) na ponta da massa de mira (Front Sight).")]
+        [SerializeField] private Transform frontSightSocket;
+
+        [Tooltip("Ponto de referência (socket) no entalhe da alça de mira (Rear Sight).")]
+        [SerializeField] private Transform rearSightSocket;
+
+        [Tooltip("Distância confortável da alça de mira até a lente da câmera (Eye Relief em metros).")]
+        [SerializeField] private float adsEyeRelief = 0.18f;
+
+        [Tooltip("Alinhamento automático analítico que posiciona os sockets colineares com o centro do viewport.")]
+        [SerializeField] private bool autoAlignSocketsInADS = true;
+
         [Header("Calibração Fina de Mira (ADS Tuning & Offset)")]
         [Tooltip("Offset adicional de posição para ajuste em tempo real (Inspector ou Teclado).")]
         [SerializeField] private Vector3 adsPositionOffset = Vector3.zero;
 
         [Tooltip("Offset adicional de rotação Euler (Pitch no eixo X) para nivelar o ferrolho com o horizonte.")]
         [SerializeField] private Vector3 adsRotationOffset = Vector3.zero;
+
+        private Vector3 _calibratedAdsPosition;
+        private Vector3 _calibratedAdsRotation;
+        private bool _hasCalibratedADS = false;
 
         [Tooltip("Campo de visão padrão da câmera no quadril.")]
         [SerializeField] private float hipFOV = 72f;
@@ -114,6 +131,58 @@ namespace IPSCSimulator.Weapons
         {
             weaponData = data;
             hipPosition = hipPos;
+            CalibrateADSFromSockets();
+        }
+
+        public void SetSightSockets(Transform frontSight, Transform rearSight, float eyeRelief = 0.18f)
+        {
+            frontSightSocket = frontSight;
+            rearSightSocket = rearSight;
+            adsEyeRelief = eyeRelief;
+            CalibrateADSFromSockets();
+        }
+
+        /// <summary>
+        /// Calcula matematicamente a posição e rotação local do WeaponHolder para que
+        /// a massa de mira (Front Sight) e o entalhe da alça de mira (Rear Sight)
+        /// fiquem colineares com o eixo Z frontal da câmera (X=0, Y=0 no centro do viewport).
+        /// </summary>
+        public void CalibrateADSFromSockets()
+        {
+            if (frontSightSocket == null || rearSightSocket == null || weaponTransform == null)
+            {
+                _calibratedAdsPosition = (weaponData != null) ? weaponData.AdsLocalPosition : new Vector3(0f, -0.024f, 0.18f);
+                _calibratedAdsRotation = (weaponData != null) ? weaponData.AdsLocalRotation : new Vector3(-3.2f, 0f, 0f);
+                _hasCalibratedADS = true;
+                return;
+            }
+
+            // Calcula o vetor da alça de mira até a massa de mira no espaço local do weaponTransform
+            Vector3 frontLocal = weaponTransform.InverseTransformPoint(frontSightSocket.position);
+            Vector3 rearLocal = weaponTransform.InverseTransformPoint(rearSightSocket.position);
+            Vector3 sightDirLocal = (frontLocal - rearLocal).normalized;
+
+            if (sightDirLocal.sqrMagnitude < 0.0001f)
+            {
+                sightDirLocal = Vector3.forward;
+            }
+
+            // 1. Rotação necessária para apontar a reta de visada exatamente em Vector3.forward (câmera frontal)
+            Quaternion alignRot = Quaternion.FromToRotation(sightDirLocal, Vector3.forward);
+
+            // 2. Posição necessária para posicionar o entalhe da alça de mira (rearLocal) em (0, 0, adsEyeRelief):
+            // CameraSpace: TargetPos + alignRot * rearLocal = (0, 0, adsEyeRelief)
+            // TargetPos = (0, 0, adsEyeRelief) - (alignRot * rearLocal)
+            Vector3 targetHolderPos = new Vector3(0f, 0f, adsEyeRelief) - (alignRot * rearLocal);
+            Vector3 targetEuler = alignRot.eulerAngles;
+
+            if (targetEuler.x > 180f) targetEuler.x -= 360f;
+            if (targetEuler.y > 180f) targetEuler.y -= 360f;
+            if (targetEuler.z > 180f) targetEuler.z -= 360f;
+
+            _calibratedAdsPosition = targetHolderPos;
+            _calibratedAdsRotation = targetEuler;
+            _hasCalibratedADS = true;
         }
 
         private void Awake()
@@ -309,9 +378,17 @@ namespace IPSCSimulator.Weapons
         {
             if (weaponTransform == null) return;
 
-            // Posições base do WeaponData incorporando calibração fina (elevada e nivelada)
-            Vector3 adsPos = ((weaponData != null) ? weaponData.AdsLocalPosition : new Vector3(0f, -0.024f, 0.18f)) + adsPositionOffset;
-            Vector3 adsRot = ((weaponData != null) ? weaponData.AdsLocalRotation : new Vector3(-3.2f, 0f, 0f)) + adsRotationOffset;
+            // Se calibrado pelos sockets de massa/alça, utiliza o alinhamento analítico; senão, utiliza o WeaponData
+            if (autoAlignSocketsInADS && !_hasCalibratedADS)
+            {
+                CalibrateADSFromSockets();
+            }
+
+            Vector3 baseAdsPos = _hasCalibratedADS ? _calibratedAdsPosition : ((weaponData != null) ? weaponData.AdsLocalPosition : new Vector3(0f, -0.024f, 0.18f));
+            Vector3 baseAdsRot = _hasCalibratedADS ? _calibratedAdsRotation : ((weaponData != null) ? weaponData.AdsLocalRotation : new Vector3(-3.2f, 0f, 0f));
+
+            Vector3 adsPos = baseAdsPos + adsPositionOffset;
+            Vector3 adsRot = baseAdsRot + adsRotationOffset;
 
             // Transição linear suave entre Hipfire e ADS
             Vector3 basePos = Vector3.Lerp(hipPosition, adsPos, _adsProgress);
@@ -320,6 +397,20 @@ namespace IPSCSimulator.Weapons
             // Combina com o Sway/Bob e o Recuo físico
             weaponTransform.localPosition = basePos + _currentSwayPos + _currentWeaponRecoilPos;
             weaponTransform.localRotation = Quaternion.Euler(baseRot + _currentWeaponRecoilRot) * _currentSwayRot;
+        }
+
+        private void OnDrawGizmos()
+        {
+            if (frontSightSocket != null && rearSightSocket != null)
+            {
+                Gizmos.color = Color.cyan;
+                Gizmos.DrawSphere(frontSightSocket.position, 0.003f);
+                Gizmos.color = Color.yellow;
+                Gizmos.DrawSphere(rearSightSocket.position, 0.003f);
+                Gizmos.color = Color.green;
+                Vector3 dir = (frontSightSocket.position - rearSightSocket.position).normalized;
+                Gizmos.DrawLine(rearSightSocket.position, rearSightSocket.position + dir * 10f);
+            }
         }
     }
 }
