@@ -27,10 +27,17 @@ namespace IPSCSimulator.Weapons
 
         [Header("Posicionamento no Quadril (Hipfire)")]
         [Tooltip("Posição de descanso da arma quando não estiver mirando.")]
-        [SerializeField] private Vector3 hipPosition = new Vector3(0.085f, -0.125f, 0.28f);
+        [SerializeField] private Vector3 hipPosition = new Vector3(0.10f, -0.14f, 0.32f);
 
         [Tooltip("Rotação base da arma em graus.")]
         [SerializeField] private Vector3 hipRotation = Vector3.zero;
+
+        [Header("Calibração Fina de Mira (ADS Tuning & Offset)")]
+        [Tooltip("Offset adicional de posição para ajuste em tempo real (Inspector ou Teclado).")]
+        [SerializeField] private Vector3 adsPositionOffset = Vector3.zero;
+
+        [Tooltip("Offset adicional de rotação Euler (Pitch no eixo X) para nivelar o ferrolho com o horizonte.")]
+        [SerializeField] private Vector3 adsRotationOffset = Vector3.zero;
 
         [Tooltip("Campo de visão padrão da câmera no quadril.")]
         [SerializeField] private float hipFOV = 72f;
@@ -126,7 +133,35 @@ namespace IPSCSimulator.Weapons
             HandleADSInput();
             HandleSwayAndBobbing();
             HandleWeaponAndCameraRecoil();
+            HandleLiveTuning();
             ApplyProceduralTransform();
+        }
+
+        private void HandleLiveTuning()
+        {
+            if (!_isAiming) return;
+
+            // Micro-calibração em tempo real durante a mira (ADS):
+            // Setas Cima/Baixo: Eleva ou abaixa a arma em relação aos olhos
+            // Setas Esquerda/Direita: Centraliza o alinhamento horizontal
+            // PageUp / PageDown: Ajusta o Pitch no eixo X (ergue ou abaixa a ponta do cano)
+            // Tecla P: Registra os valores exatos calibrados no Console
+            float moveStep = Time.deltaTime * 0.04f;
+            float rotStep = Time.deltaTime * 12f;
+
+            if (Input.GetKey(KeyCode.UpArrow)) adsPositionOffset.y += moveStep;
+            if (Input.GetKey(KeyCode.DownArrow)) adsPositionOffset.y -= moveStep;
+            if (Input.GetKey(KeyCode.LeftArrow)) adsPositionOffset.x -= moveStep;
+            if (Input.GetKey(KeyCode.RightArrow)) adsPositionOffset.x += moveStep;
+            if (Input.GetKey(KeyCode.PageUp)) adsRotationOffset.x -= rotStep;
+            if (Input.GetKey(KeyCode.PageDown)) adsRotationOffset.x += rotStep;
+
+            if (Input.GetKeyDown(KeyCode.P))
+            {
+                Vector3 currentAdsPos = ((weaponData != null) ? weaponData.AdsLocalPosition : new Vector3(0f, -0.024f, 0.18f)) + adsPositionOffset;
+                Vector3 currentAdsRot = ((weaponData != null) ? weaponData.AdsLocalRotation : new Vector3(-3.2f, 0f, 0f)) + adsRotationOffset;
+                Debug.Log($"<color=#00FFAA>[Calibração ADS]</color> Posição: {currentAdsPos.ToString("F4")} | Rotação (Pitch): {currentAdsRot.ToString("F2")}");
+            }
         }
 
         // ========================================================================================
@@ -274,9 +309,9 @@ namespace IPSCSimulator.Weapons
         {
             if (weaponTransform == null) return;
 
-            // Posições base do WeaponData
-            Vector3 adsPos = (weaponData != null) ? weaponData.AdsLocalPosition : new Vector3(0f, -0.046f, 0.16f);
-            Vector3 adsRot = (weaponData != null) ? weaponData.AdsLocalRotation : Vector3.zero;
+            // Posições base do WeaponData incorporando calibração fina (elevada e nivelada)
+            Vector3 adsPos = ((weaponData != null) ? weaponData.AdsLocalPosition : new Vector3(0f, -0.024f, 0.18f)) + adsPositionOffset;
+            Vector3 adsRot = ((weaponData != null) ? weaponData.AdsLocalRotation : new Vector3(-3.2f, 0f, 0f)) + adsRotationOffset;
 
             // Transição linear suave entre Hipfire e ADS
             Vector3 basePos = Vector3.Lerp(hipPosition, adsPos, _adsProgress);

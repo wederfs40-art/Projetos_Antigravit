@@ -773,7 +773,8 @@ namespace IPSCSimulator.UI
             SetField(w, "damageStat", dmg);
             SetField(w, "accuracyStat", acc);
             SetField(w, "fireRateStat", rate);
-            SetField(w, "adsLocalPosition", new Vector3(0f, -0.046f, 0.16f));
+            SetField(w, "adsLocalPosition", new Vector3(0f, -0.024f, 0.18f));
+            SetField(w, "adsLocalRotation", new Vector3(-3.2f, 0f, 0f));
             SetField(w, "adsSpeed", 14f);
             SetField(w, "adsCameraFOV", 48f);
 

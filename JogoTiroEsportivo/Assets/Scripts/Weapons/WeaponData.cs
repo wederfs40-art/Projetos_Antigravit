@@ -118,10 +118,10 @@ namespace IPSCSimulator.Weapons
         // ========================================================================================
         [Header("5. Visada / ADS (Aim Down Sights)")]
         [Tooltip("Posição local (X, Y, Z) relativa à câmera onde a alça e massa de mira ficam perfeitamente alinhadas no centro do campo visual.")]
-        [SerializeField] private Vector3 adsLocalPosition = new Vector3(0f, -0.046f, 0.16f);
+        [SerializeField] private Vector3 adsLocalPosition = new Vector3(0f, -0.024f, 0.18f);
 
-        [Tooltip("Rotação local em graus (Euler) para alinhamento axial preciso do cano com a visão do atirador.")]
-        [SerializeField] private Vector3 adsLocalRotation = Vector3.zero;
+        [Tooltip("Rotação local em graus (Euler) para alinhamento axial preciso do cano com a visão do atirador (Pitch negativo ergue o cano nivelando com o horizonte).")]
+        [SerializeField] private Vector3 adsLocalRotation = new Vector3(-3.2f, 0f, 0f);
 
         [Tooltip("Velocidade da interpolação suave (Lerp) para transição entre o porte de guarda baixa (Hipfire) e a visada (ADS).")]
         [SerializeField] private float adsSpeed = 14f;

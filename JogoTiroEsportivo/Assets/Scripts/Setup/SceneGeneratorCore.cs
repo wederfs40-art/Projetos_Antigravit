@@ -866,7 +866,8 @@ namespace IPSCSimulator.Setup
             float velocity = 380f;
             bool isAuto = false;
             float recoilMult = 1.0f;
-            Vector3 adsPos = new Vector3(0f, -0.0465f, 0.32f);
+            Vector3 adsPos = new Vector3(0f, -0.024f, 0.18f);
+            Vector3 adsRot = new Vector3(-3.2f, 0f, 0f);
             Vector3 hipPos = new Vector3(0.18f, -0.22f, 0.42f);
 
             GameObject modelInstance = null;
@@ -942,7 +943,8 @@ namespace IPSCSimulator.Setup
                         modelInstance.transform.localRotation = Quaternion.identity;
                         modelInstance.transform.localScale = Vector3.one;
                         muzzleObj.transform.localPosition = new Vector3(0f, 0.028f, 0.22f);
-                        adsPos = new Vector3(0f, -0.046f, 0.16f); // Alça e massa de mira coladas nos olhos (Conforme Ilustração "Seu Foco Visual")
+                        adsPos = new Vector3(0f, -0.024f, 0.18f); // Eleva a arma aos olhos e nivelamento de alça/massa
+                        adsRot = new Vector3(-3.2f, 0f, 0f);      // Pitch horizontal no eixo X (ferrolho alinhado ao horizonte)
                         hipPos = new Vector3(0.085f, -0.125f, 0.28f);
                         slideObj = FindChildRecursive(modelInstance.transform, "Slide", "Pistol_A_Bolt");
                         magObj = FindChildRecursive(modelInstance.transform, "Magazine", "Pistol_A_Mag");
@@ -957,7 +959,8 @@ namespace IPSCSimulator.Setup
                         modelInstance.transform.localRotation = Quaternion.identity;
                         modelInstance.transform.localScale = Vector3.one * 1.15f;
                         muzzleObj.transform.localPosition = new Vector3(0f, 0.030f, 0.22f);
-                        adsPos = new Vector3(0f, -0.046f, 0.16f);
+                        adsPos = new Vector3(0f, -0.024f, 0.18f);
+                        adsRot = new Vector3(-3.0f, 0f, 0f);
                         hipPos = new Vector3(0.085f, -0.125f, 0.28f);
                         slideObj = FindChildRecursive(modelInstance.transform, "Slide", "Pistol_A_Bolt");
                         magObj = FindChildRecursive(modelInstance.transform, "Magazine", "Pistol_A_Mag");
@@ -972,7 +975,8 @@ namespace IPSCSimulator.Setup
                         modelInstance.transform.localRotation = Quaternion.identity;
                         modelInstance.transform.localScale = Vector3.one * 1.15f;
                         muzzleObj.transform.localPosition = new Vector3(0f, 0.032f, 0.24f);
-                        adsPos = new Vector3(0f, -0.048f, 0.16f);
+                        adsPos = new Vector3(0f, -0.025f, 0.18f);
+                        adsRot = new Vector3(-3.0f, 0f, 0f);
                         hipPos = new Vector3(0.085f, -0.125f, 0.28f);
                         slideObj = FindChildRecursive(modelInstance.transform, "Slide", "Pistol_B_Bolt");
                         magObj = FindChildRecursive(modelInstance.transform, "Magazine", "Pistol_B_Mag");
@@ -987,7 +991,8 @@ namespace IPSCSimulator.Setup
                         modelInstance.transform.localRotation = Quaternion.identity;
                         modelInstance.transform.localScale = Vector3.one * 0.95f;
                         muzzleObj.transform.localPosition = new Vector3(0f, 0.035f, 0.28f);
-                        adsPos = new Vector3(0f, -0.050f, 0.17f);
+                        adsPos = new Vector3(0f, -0.030f, 0.18f);
+                        adsRot = new Vector3(-2.8f, 0f, 0f);
                         hipPos = new Vector3(0.085f, -0.130f, 0.28f);
                         slideObj = FindChildRecursive(modelInstance.transform, "DW_Hummer", "Hammer");
                         magObj = FindChildRecursive(modelInstance.transform, "DW_MagazineAssembly", "Cylinder", "Speedloader");
@@ -1002,7 +1007,8 @@ namespace IPSCSimulator.Setup
                         modelInstance.transform.localRotation = Quaternion.identity;
                         modelInstance.transform.localScale = Vector3.one;
                         muzzleObj.transform.localPosition = new Vector3(0f, 0.038f, 0.32f);
-                        adsPos = new Vector3(0f, -0.052f, 0.17f);
+                        adsPos = new Vector3(0f, -0.032f, 0.18f);
+                        adsRot = new Vector3(-2.8f, 0f, 0f);
                         hipPos = new Vector3(0.085f, -0.130f, 0.28f);
                         slideObj = FindChildRecursive(modelInstance.transform, "Hammer", "DW_Hummer");
                         magObj = FindChildRecursive(modelInstance.transform, "Cylinder", "SH Speedloader");
@@ -1017,7 +1023,8 @@ namespace IPSCSimulator.Setup
                         modelInstance.transform.localRotation = Quaternion.identity;
                         modelInstance.transform.localScale = Vector3.one;
                         muzzleObj.transform.localPosition = new Vector3(0f, 0.035f, 0.45f);
-                        adsPos = new Vector3(0f, -0.058f, 0.18f);
+                        adsPos = new Vector3(0f, -0.038f, 0.22f);
+                        adsRot = new Vector3(-2.0f, 0f, 0f);
                         hipPos = new Vector3(0.090f, -0.135f, 0.30f);
                         slideObj = FindChildRecursive(modelInstance.transform, "Bolt", "Slide");
                         magObj = FindChildRecursive(modelInstance.transform, "Magazine", "Mag");
@@ -1032,7 +1039,8 @@ namespace IPSCSimulator.Setup
                         modelInstance.transform.localRotation = Quaternion.identity;
                         modelInstance.transform.localScale = Vector3.one * 1.15f;
                         muzzleObj.transform.localPosition = new Vector3(0f, 0.035f, 0.42f);
-                        adsPos = new Vector3(0f, -0.058f, 0.18f);
+                        adsPos = new Vector3(0f, -0.038f, 0.22f);
+                        adsRot = new Vector3(-2.0f, 0f, 0f);
                         hipPos = new Vector3(0.090f, -0.135f, 0.30f);
                         slideObj = FindChildRecursive(modelInstance.transform, "SMG_F_Bolt", "Bolt", "Slide");
                         magObj = FindChildRecursive(modelInstance.transform, "SMG_F_Mag", "Magazine", "Mag");
@@ -1047,7 +1055,8 @@ namespace IPSCSimulator.Setup
                         modelInstance.transform.localRotation = Quaternion.identity;
                         modelInstance.transform.localScale = Vector3.one * 1.15f;
                         muzzleObj.transform.localPosition = new Vector3(0f, 0.030f, 0.40f);
-                        adsPos = new Vector3(0f, -0.055f, 0.17f);
+                        adsPos = new Vector3(0f, -0.035f, 0.20f);
+                        adsRot = new Vector3(-1.8f, 0f, 0f);
                         hipPos = new Vector3(0.090f, -0.135f, 0.30f);
                         slideObj = FindChildRecursive(modelInstance.transform, "SMG_G_Bolt", "Bolt");
                         magObj = FindChildRecursive(modelInstance.transform, "SMG_G_Mag", "Magazine");
@@ -1062,7 +1071,8 @@ namespace IPSCSimulator.Setup
                         modelInstance.transform.localRotation = Quaternion.identity;
                         modelInstance.transform.localScale = Vector3.one * 0.90f;
                         muzzleObj.transform.localPosition = new Vector3(0f, 0.040f, 0.65f);
-                        adsPos = new Vector3(0f, -0.058f, 0.26f);
+                        adsPos = new Vector3(0f, -0.042f, 0.24f);
+                        adsRot = new Vector3(-1.8f, 0f, 0f);
                         hipPos = new Vector3(0.12f, -0.16f, 0.36f);
                         slideObj = FindChildRecursive(modelInstance.transform, "WPN_AKM_bolt_carrier", "SMG_F_Bolt", "Slide", "Bolt");
                         magObj = FindChildRecursive(modelInstance.transform, "WPN_AKM_magazine", "SMG_F_Mag", "Magazine", "Mag");
@@ -1117,7 +1127,8 @@ namespace IPSCSimulator.Setup
                         velocity = 450f;
                         isAuto = false;
                         recoilMult = 1.75f;
-                        adsPos = new Vector3(0f, -0.052f, 0.28f);
+                        adsPos = new Vector3(0f, -0.030f, 0.20f);
+                        adsRot = new Vector3(-2.8f, 0f, 0f);
                         hipPos = new Vector3(0.10f, -0.13f, 0.32f);
                         slideObj = BuildDetailedRevolverMesh(gunRoot.transform, muzzleObj.transform, matMetal, matSlide, matFiber, matBrass);
                         break;
@@ -1130,7 +1141,8 @@ namespace IPSCSimulator.Setup
                         velocity = 715f;
                         isAuto = true;
                         recoilMult = 1.1f;
-                        adsPos = new Vector3(0f, -0.058f, 0.26f);
+                        adsPos = new Vector3(0f, -0.038f, 0.22f);
+                        adsRot = new Vector3(-2.0f, 0f, 0f);
                         hipPos = new Vector3(0.12f, -0.16f, 0.36f);
                         slideObj = BuildDetailedSMGMesh(gunRoot.transform, muzzleObj.transform, matMetal, matSlide, matFiber);
                         break;
@@ -1140,7 +1152,8 @@ namespace IPSCSimulator.Setup
                         velocity = 380f;
                         isAuto = false;
                         recoilMult = 1.0f;
-                        adsPos = new Vector3(0f, -0.0465f, 0.22f);
+                        adsPos = new Vector3(0f, -0.024f, 0.18f);
+                        adsRot = new Vector3(-3.2f, 0f, 0f);
                         hipPos = new Vector3(0.10f, -0.13f, 0.32f);
                         slideObj = BuildDetailedPistolMesh(gunRoot.transform, muzzleObj.transform, matMetal, matSlide, matFiber, matBrass);
                         break;
@@ -1182,7 +1195,7 @@ namespace IPSCSimulator.Setup
             wData.name = $"Data_{weaponType}";
             SetFieldValue(wData, "weaponName", weaponType.ToString().Replace("_", " "));
             SetFieldValue(wData, "adsLocalPosition", adsPos);
-            SetFieldValue(wData, "adsLocalRotation", Vector3.zero);
+            SetFieldValue(wData, "adsLocalRotation", adsRot);
             SetFieldValue(wData, "adsSpeed", 14.0f);
             SetFieldValue(wData, "adsCameraFOV", 48.0f);
             SetFieldValue(wData, "bulletSpeed", velocity);
