@@ -1,0 +1,100 @@
+================================================================================
+ROTEIRO DE PROMPTS PARA CRIAÇÃO DE JOGO DE TIRO ESTILO COUNTER-STRIKE 2 (UNITY C#)
+================================================================================
+
+INSTRUÇÕES DE USO:
+1. Siga rigorosamente a ordem numérica de 1 a 6.
+2. Envie UM prompt por vez para a sua IA.
+3. Só avance para o próximo prompt após testar o código na Unity e garantir que
+   não há nenhum erro vermelho na aba Console.
+4. Dica: Ao enviar o Prompt 2 ou 3, cole junto o código do WeaponData.cs gerado
+   no Prompt 1 para que a IA mantenha os mesmos nomes de variáveis.
+
+--------------------------------------------------------------------------------
+PROMPT 1: ESTRUTURA DE DADOS DAS ARMAS (SCRIPTABLEOBJECTS)
+Objetivo: Criar o molde onde você vai configurar cada arma no Inspector.
+--------------------------------------------------------------------------------
+
+Atue como um desenvolvedor sênior de Unity C#. Quero criar um sistema de armas modular para um jogo de tiro realista. Comece criando apenas o `ScriptableObject` chamado `WeaponData`. Ele precisa conter variáveis organizadas com `[Header]` e `[Tooltip]` para:
+1. Identificação (Nome da arma, categoria usando um `enum WeaponCategory` com Pistolas, Espingardas, Submetralhadoras, Fuzis, Snipers e Equipamentos, ícone 2D para menu, prefab 3D da arma, e estatísticas visuais de 0 a 100 para Dano, Precisão e Cadência).
+2. Modo Balístico (Enum para escolher entre `Hitscan` ou `PhysicalProjectile`, velocidade do projétil e gravidade/queda de bala).
+3. Precisão e Recuo (curva de padrão de recuo `AnimationCurve` ou `Vector2[]`, dispersão base `baseSpread`, multiplicador de dispersão por movimento do jogador).
+4. Penetração (poder de penetração da arma e redução de dano ao atravessar objetos).
+5. Visada/ADS (posição e rotação exatas para alinhar alça e massa de mira na câmera, velocidade de transição e FOV da câmera ao mirar).
+
+Me entregue apenas o código completo do `WeaponData.cs` e explique brevemente como criar o arquivo no menu da Unity.
+
+
+--------------------------------------------------------------------------------
+PROMPT 2: SISTEMA DE DISPARO, BALÍSTICA E PENETRAÇÃO DE MATERIAIS
+Objetivo: Fazer a arma atirar com dispersão por movimento, queda de bala e varar paredes.
+--------------------------------------------------------------------------------
+
+Usando o `WeaponData` que criamos anteriormente, crie agora o script `WeaponBallistics.cs` em C# para Unity. Ele deve gerenciar os disparos com as seguintes regras:
+1. Dispersão (Spread): Leia a velocidade atual do `CharacterController` ou `Rigidbody` do jogador. Quanto mais rápido ele se mover, maior o espalhamento do tiro (estilo Counter-Strike). Se estiver parado e mirando, a precisão deve ser quase 100%.
+2. Modo Híbrido: Se a arma estiver configurada como `Hitscan`, use Raycast instantâneo. Se estiver como `PhysicalProjectile`, instancie um projétil (ou simule via sub-steps de Raycast) que sofre ação da gravidade (`Bullet Drop`) para pistas de longa distância.
+3. Penetração de Materiais: Crie um script simples `PenetrableSurface.cs` para colocar nos objetos do cenário (ex: madeira = fácil de varar, concreto = difícil, metal = impenetrável). Quando o tiro atingir um objeto, verifique o componente e calcule se a bala atravessa com dano reduzido ou para.
+
+Me entregue os scripts `WeaponBallistics.cs` e `PenetrableSurface.cs` completos.
+
+
+--------------------------------------------------------------------------------
+PROMPT 3: MIRA (ALÇA E MASSA) FIRME E RECUO CONTROLÁVEL
+Objetivo: Alinhar alça e massa perfeitamente sem tremer na visada e criar recuo.
+--------------------------------------------------------------------------------
+
+Crie o script `WeaponProceduralMotion.cs` em C# para Unity para controlar a movimentação visual da arma e da câmera. Preciso resolver dois pontos críticos:
+1. Alinhamento Perfeito de Alça e Massa (ADS): Quando o jogador segurar o botão direito do mouse, a arma deve deslizar suavemente até a posição exata configurada no `WeaponData` para alinhar a alça e a massa de mira com o centro da câmera. Importante: Durante o modo de visada (ADS), o balanço de caminhada (Weapon Bob) e a inércia do mouse (Weapon Sway) devem ser reduzidos a zero (ou quase zero) para que a mira fique perfeitamente estável e não atrapalhe o tiro de precisão.
+2. Recuo Controlável (Recoil): Aplique o padrão de recuo (`Recoil Pattern`) na rotação da câmera a cada tiro, com uma recuperação suave quando o jogador parar de atirar, permitindo que o jogador controle o spray puxando o mouse para baixo como no Counter-Strike 2.
+
+Me entregue o código completo e diga onde anexar o script na hierarquia da arma.
+
+
+--------------------------------------------------------------------------------
+PROMPT 4: HUD MINIMALISTA DE JOGO (MIRA DINÂMICA, MUNIÇÃO E CRONÔMETRO)
+Objetivo: Criar a interface minimalista inspirada no Counter-Strike 2 durante a partida.
+--------------------------------------------------------------------------------
+
+Agora vamos criar a interface de jogo (HUD) inspirada no design minimalista e translúcido do Counter-Strike 2, usando Unity Canvas e TextMeshPro. Crie um script `GameplayHUD.cs` e me dê o passo a passo de como montar os elementos no Canvas para:
+1. Mira Dinâmica (Dynamic Crosshair): 4 linhas (cima, baixo, esquerda, direita) feitas com UI Images que se afastam do centro conforme a dispersão atual da arma (andando ou atirando) e fecham quando o jogador para. A mira deve desaparecer suavemente quando o jogador usar a visada (ADS) da arma.
+2. Contador de Munição: Canto inferior direito, limpo, mostrando balas no pente / balas reserva.
+3. Cronômetro e Placar da Pista: Topo central, minimalista, mostrando o tempo da pista de tiro e a pontuação/alvos acertados.
+
+Me entregue o script `GameplayHUD.cs` com métodos públicos para atualizar esses valores e instruções de hierarquia no Canvas.
+
+
+--------------------------------------------------------------------------------
+PROMPT 5: MENU PRINCIPAL E QUADRO DE SELEÇÃO DE ARMAS POR CATEGORIA (ESTILO CS2)
+Objetivo: Criar o menu com bancada 3D e quadros separados por tipo de arma.
+--------------------------------------------------------------------------------
+
+Atue como um desenvolvedor sênior de UI/UX na Unity. Quero criar um sistema de Menu Principal e uma tela de Seleção de Arsenal (Loadout) altamente inspirada no Counter-Strike 2, usando Canvas, TextMeshPro e o `WeaponData` (ScriptableObject) que já criamos.
+
+Como o sistema deve funcionar:
+1. Tela de Arsenal com Quadros por Tipo: Na tela de seleção, crie abas ou colunas para cada categoria (`WeaponCategory`: Pistolas, Espingardas, Submetralhadoras, Fuzis, Snipers, Equipamentos). Quando o jogador clicar em uma categoria (ex: 'Pistolas'), deve abrir um quadro/painel exibindo uma grade (Grid Layout) com todos os modelos disponíveis daquela categoria (mostrando ícone/miniatura da arma, nome e barras simples de Dano, Precisão e Cadência). Ao clicar em 'Espingardas', o quadro atualiza mostrando os modelos de espingardas, e assim por diante.
+2. Preview 3D em Tempo Real: Ao clicar em qualquer modelo dentro do quadro, a arma escolhida deve aparecer imediatamente em 3D sobre a bancada do estande de tiro no fundo do menu, com iluminação de destaque, e ficar salva como a arma equipada para quando o jogador entrar nas pistas.
+3. Seleção de Pista: Inclua também o painel para escolher entre Estande Indoor, Estande Outdoor, Tiro de Precisão e Pista de Combate, carregando a cena correspondente.
+
+Me entregue o código completo do `LoadoutMenuManager.cs` e o passo a passo de como organizar os painéis, Grid Layout Group e Prefabs de botões no Canvas da Unity.
+
+
+--------------------------------------------------------------------------------
+PROMPT 6: REALISMO GRÁFICO ESTILO COUNTER-STRIKE 2 (TECHNICAL ARTIST)
+Objetivo: Configurar luzes, reflexos e pós-processamento para Indoor e Outdoor.
+(ATENÇÃO: Antes de colar, escolha entre HDRP ou URP na primeira linha abaixo)
+--------------------------------------------------------------------------------
+
+Atue como um Technical Artist especialista em fotorrealismo na Unity [ESCOLHA: HDRP ou URP]. Quero transformar o visual do meu jogo de tiro para atingir a qualidade gráfica, nitidez e realismo de materiais do Counter-Strike 2 (Source 2). Tenho dois cenários distintos e preciso do passo a passo exato de configuração no Inspector para cada um:
+
+Cenário 1: Estande de Tiro Fechado (Indoor)
+- Quero iluminação artificial realista (luminárias fluorescentes no teto e spots focados nos alvos), sem deixar o ambiente escuro ou lavado.
+- Como configurar Reflection Probes e materiais (Smoothness/Metallic) para que o chão de concreto polido e as armas metálicas reflitam as luzes do teto com realismo.
+- Configuração de Baked Lightmaps para sombras suaves e realistas nas paredes e cabines.
+
+Cenário 2: Pista Aberta (Outdoor)
+- Luz solar forte de meio-dia/fim de tarde com sombras nítidas (`Directional Light` + `Shadow Cascades`).
+- Configuração de céu realista (`Procedural Sky` ou `HDRI Sky`) e neblina atmosférica sutil (`Fog`) para dar profundidade nas pistas de longa distância.
+
+Pós-Processamento (Volume Profile):
+- com os valores exatos recomendados para Tonemapping (ACES), Bloom (sutil, apenas nos reflexos metálicos e lâmpadas), Ambient Occlusion (para dar peso aos objetos no chão) e Color Adjustments (contraste e nitidez) elimine o aspecto 'plástico' padrão da Unity.
+================================================================================
