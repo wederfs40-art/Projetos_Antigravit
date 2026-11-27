@@ -88,6 +88,9 @@ namespace IPSCSimulator.Weapons
 
         private void HandleInputs()
         {
+            // Se o cursor estiver liberado (interagindo com menus da UI), não atira nem altera arma
+            if (Cursor.lockState != CursorLockMode.Locked) return;
+
             // Botão direito: Mira (ADS)
             _isAiming = Input.GetMouseButton(1);
 

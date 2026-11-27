@@ -66,6 +66,9 @@ namespace IPSCSimulator.Player
 
         private void HandleMovement()
         {
+            // Se o cursor estiver liberado (menu de arsenal ou pausa aberto), não move o jogador
+            if (Cursor.lockState != CursorLockMode.Locked) return;
+
             float horizontal = Input.GetAxisRaw("Horizontal");
             float vertical = Input.GetAxisRaw("Vertical");
 
