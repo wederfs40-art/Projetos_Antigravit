@@ -46,11 +46,24 @@ namespace IPSCSimulator.Weapons
         [SerializeField] private bool autoAlignSocketsInADS = true;
 
         [Header("Calibração Fina de Mira (ADS Tuning & Offset)")]
-        [Tooltip("Offset adicional de posição para ajuste em tempo real (Inspector ou Teclado).")]
-        [SerializeField] private Vector3 adsPositionOffset = Vector3.zero;
+        [Tooltip("Offset adicional de posição para ajuste em tempo real (X, Y, Z em metros).")]
+        public Vector3 adsPositionOffset = Vector3.zero;
 
-        [Tooltip("Offset adicional de rotação Euler (Pitch no eixo X) para nivelar o ferrolho com o horizonte.")]
-        [SerializeField] private Vector3 adsRotationOffset = Vector3.zero;
+        [Tooltip("Offset adicional de rotação Euler (Pitch no eixo X, Yaw no Y, Roll no Z em graus).")]
+        public Vector3 adsRotationOffset = Vector3.zero;
+
+        [Header("Painel Interativo de Calibração na Tela")]
+        [Tooltip("Exibe janela com sliders na tela para ajuste visual e milimétrico da mira.")]
+        public bool showDebugCalibrationUI = false;
+
+        [Tooltip("Mantém a visada ADS travada (sem precisar segurar o botão direito) para calibrar.")]
+        public bool forceLockADS = false;
+
+        [Tooltip("Exibe um retículo guia no centro exato da tela (guia óptico de 1 pixel).")]
+        public bool showScreenCenterGuide = true;
+
+        public Vector3 AdsPositionOffset { get => adsPositionOffset; set => adsPositionOffset = value; }
+        public Vector3 AdsRotationOffset { get => adsRotationOffset; set => adsRotationOffset = value; }
 
         private Vector3 _calibratedAdsPosition;
         private Vector3 _calibratedAdsRotation;
@@ -206,30 +219,65 @@ namespace IPSCSimulator.Weapons
             ApplyProceduralTransform();
         }
 
+        public void ToggleDebugCalibrationUI(bool open)
+        {
+            showDebugCalibrationUI = open;
+            if (showDebugCalibrationUI)
+            {
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+            }
+            else
+            {
+                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.visible = false;
+            }
+        }
+
         private void HandleLiveTuning()
         {
-            if (!_isAiming) return;
+            // F1: Alterna painel visual de sliders na tela
+            if (Input.GetKeyDown(KeyCode.F1))
+            {
+                ToggleDebugCalibrationUI(!showDebugCalibrationUI);
+            }
 
-            // Micro-calibração em tempo real durante a mira (ADS):
-            // Setas Cima/Baixo: Eleva ou abaixa a arma em relação aos olhos
-            // Setas Esquerda/Direita: Centraliza o alinhamento horizontal
-            // PageUp / PageDown: Ajusta o Pitch no eixo X (ergue ou abaixa a ponta do cano)
-            // Tecla P: Registra os valores exatos calibrados no Console
-            float moveStep = Time.deltaTime * 0.04f;
-            float rotStep = Time.deltaTime * 12f;
+            // F2: Trava/destrava visada ADS para calibrar sem segurar o mouse
+            if (Input.GetKeyDown(KeyCode.F2))
+            {
+                forceLockADS = !forceLockADS;
+                Debug.Log($"<color=#00FFAA>[ADS Lock]</color> {(forceLockADS ? "ATIVADO" : "DESATIVADO")}");
+            }
+
+            if (!_isAiming && !forceLockADS) return;
+
+            // Micro-calibração via teclado enquanto mira (Shift acelera o passo):
+            float moveStep = (Input.GetKey(KeyCode.LeftShift) ? 0.08f : 0.02f) * Time.deltaTime;
+            float rotStep = (Input.GetKey(KeyCode.LeftShift) ? 20f : 6f) * Time.deltaTime;
 
             if (Input.GetKey(KeyCode.UpArrow)) adsPositionOffset.y += moveStep;
             if (Input.GetKey(KeyCode.DownArrow)) adsPositionOffset.y -= moveStep;
             if (Input.GetKey(KeyCode.LeftArrow)) adsPositionOffset.x -= moveStep;
             if (Input.GetKey(KeyCode.RightArrow)) adsPositionOffset.x += moveStep;
+            if (Input.GetKey(KeyCode.RightBracket)) adsPositionOffset.z += moveStep;
+            if (Input.GetKey(KeyCode.LeftBracket)) adsPositionOffset.z -= moveStep;
+
             if (Input.GetKey(KeyCode.PageUp)) adsRotationOffset.x -= rotStep;
             if (Input.GetKey(KeyCode.PageDown)) adsRotationOffset.x += rotStep;
+            if (Input.GetKey(KeyCode.Home)) adsRotationOffset.y -= rotStep;
+            if (Input.GetKey(KeyCode.End)) adsRotationOffset.y += rotStep;
+            if (Input.GetKey(KeyCode.Insert)) adsRotationOffset.z -= rotStep;
+            if (Input.GetKey(KeyCode.Delete)) adsRotationOffset.z += rotStep;
 
             if (Input.GetKeyDown(KeyCode.P))
             {
-                Vector3 currentAdsPos = ((weaponData != null) ? weaponData.AdsLocalPosition : new Vector3(0f, -0.024f, 0.18f)) + adsPositionOffset;
-                Vector3 currentAdsRot = ((weaponData != null) ? weaponData.AdsLocalRotation : new Vector3(-3.2f, 0f, 0f)) + adsRotationOffset;
-                Debug.Log($"<color=#00FFAA>[Calibração ADS]</color> Posição: {currentAdsPos.ToString("F4")} | Rotação (Pitch): {currentAdsRot.ToString("F2")}");
+                Vector3 baseAdsPos = _hasCalibratedADS ? _calibratedAdsPosition : ((weaponData != null) ? weaponData.AdsLocalPosition : new Vector3(0f, -0.024f, 0.18f));
+                Vector3 baseAdsRot = _hasCalibratedADS ? _calibratedAdsRotation : ((weaponData != null) ? weaponData.AdsLocalRotation : new Vector3(-3.2f, 0f, 0f));
+                Vector3 currentAdsPos = baseAdsPos + adsPositionOffset;
+                Vector3 currentAdsRot = baseAdsRot + adsRotationOffset;
+                string log = $"adsPos = new Vector3({currentAdsPos.x:F4}f, {currentAdsPos.y:F4}f, {currentAdsPos.z:F4}f);\nadsRot = new Vector3({currentAdsRot.x:F2}f, {currentAdsRot.y:F2}f, {currentAdsRot.z:F2}f);";
+                GUIUtility.systemCopyBuffer = log;
+                Debug.Log($"<color=#00FFAA>[Calibração ADS Copiada para Clipboard!]</color>\n{log}");
             }
         }
 
@@ -238,8 +286,8 @@ namespace IPSCSimulator.Weapons
         // ========================================================================================
         private void HandleADSInput()
         {
-            // Ativa visada com botão direito do mouse
-            _isAiming = Input.GetMouseButton(1);
+            // Ativa visada com botão direito do mouse ou pelo toggle de calibração
+            _isAiming = Input.GetMouseButton(1) || forceLockADS;
 
             float targetProgress = _isAiming ? 1.0f : 0.0f;
             float transitionSpeed = (weaponData != null) ? weaponData.AdsSpeed : 14.0f;
@@ -411,6 +459,187 @@ namespace IPSCSimulator.Weapons
                 Vector3 dir = (frontSightSocket.position - rearSightSocket.position).normalized;
                 Gizmos.DrawLine(rearSightSocket.position, rearSightSocket.position + dir * 10f);
             }
+        }
+
+        // ========================================================================================
+        // 5. PAINEL INTERATIVO DE CALIBRAÇÃO VISUAL (SLIDERS EM TEMPO REAL NA TELA)
+        // ========================================================================================
+        private Rect _debugWindowRect = new Rect(20, 50, 440, 490);
+        private Texture2D _guiBgTexture;
+        private Texture2D _crossTexture;
+        private GUIStyle _windowStyle;
+        private GUIStyle _headerStyle;
+        private GUIStyle _labelStyle;
+        private GUIStyle _valueStyle;
+        private GUIStyle _buttonStyle;
+        private GUIStyle _toggleStyle;
+        private bool _guiStylesInitialized = false;
+
+        private void InitGUIStyles()
+        {
+            if (_guiStylesInitialized) return;
+
+            _guiBgTexture = new Texture2D(1, 1);
+            _guiBgTexture.SetPixel(0, 0, new Color(0.06f, 0.08f, 0.12f, 0.94f));
+            _guiBgTexture.Apply();
+
+            _windowStyle = new GUIStyle(GUI.skin.window);
+            _windowStyle.normal.background = _guiBgTexture;
+            _windowStyle.onNormal.background = _guiBgTexture;
+            _windowStyle.normal.textColor = Color.white;
+            _windowStyle.fontSize = 12;
+            _windowStyle.fontStyle = FontStyle.Bold;
+
+            _headerStyle = new GUIStyle(GUI.skin.label);
+            _headerStyle.fontSize = 11;
+            _headerStyle.fontStyle = FontStyle.Bold;
+            _headerStyle.normal.textColor = new Color(0.35f, 0.85f, 1f);
+
+            _labelStyle = new GUIStyle(GUI.skin.label);
+            _labelStyle.fontSize = 11;
+            _labelStyle.normal.textColor = new Color(0.9f, 0.9f, 0.9f);
+
+            _valueStyle = new GUIStyle(GUI.skin.label);
+            _valueStyle.fontSize = 11;
+            _valueStyle.fontStyle = FontStyle.Bold;
+            _valueStyle.normal.textColor = new Color(1f, 0.85f, 0.3f);
+            _valueStyle.alignment = TextAnchor.MiddleRight;
+
+            _buttonStyle = new GUIStyle(GUI.skin.button);
+            _buttonStyle.fontSize = 11;
+            _buttonStyle.fontStyle = FontStyle.Bold;
+
+            _toggleStyle = new GUIStyle(GUI.skin.toggle);
+            _toggleStyle.fontSize = 11;
+            _toggleStyle.normal.textColor = Color.white;
+
+            _guiStylesInitialized = true;
+        }
+
+        private void OnGUI()
+        {
+            // Guia óptico de centro de tela (ponto/cruz de 1 pixel central)
+            if (showScreenCenterGuide && (_isAiming || forceLockADS || showDebugCalibrationUI))
+            {
+                DrawScreenCenterCross();
+            }
+
+            if (!showDebugCalibrationUI)
+            {
+                if (GUI.Button(new Rect(10, 10, 185, 26), "🔧 CALIBRAR MIRA [F1]"))
+                {
+                    ToggleDebugCalibrationUI(true);
+                }
+                return;
+            }
+
+            InitGUIStyles();
+            _debugWindowRect = GUI.Window(999, _debugWindowRect, DrawCalibrationWindow, "CALIBRAÇÃO DE MIRA ADS (CS2 SIGHT TUNER)", _windowStyle);
+        }
+
+        private void DrawCalibrationWindow(int windowID)
+        {
+            string wName = (weaponData != null) ? weaponData.WeaponName : "Arma Atual";
+            GUILayout.Label($"Arma Ativa: <b><color=#FFD700>{wName}</color></b>", _headerStyle);
+
+            GUILayout.BeginHorizontal();
+            forceLockADS = GUILayout.Toggle(forceLockADS, " Travar Mira ADS [F2]", _toggleStyle);
+            showScreenCenterGuide = GUILayout.Toggle(showScreenCenterGuide, " Retículo Central", _toggleStyle);
+            GUILayout.EndHorizontal();
+
+            GUILayout.Space(6);
+            GUILayout.Label("── POSIÇÃO OFFSET (METROS / MILÍMETROS) ──", _headerStyle);
+            adsPositionOffset.x = DrawSliderRow("Pos X (Lateral):", adsPositionOffset.x, -0.06f, 0.06f, 0.0005f, "m");
+            adsPositionOffset.y = DrawSliderRow("Pos Y (Altura):", adsPositionOffset.y, -0.06f, 0.06f, 0.0005f, "m");
+            adsPositionOffset.z = DrawSliderRow("Pos Z (Distância):", adsPositionOffset.z, -0.12f, 0.12f, 0.0010f, "m");
+
+            GUILayout.Space(6);
+            GUILayout.Label("── ROTAÇÃO OFFSET (GRAUS EULER) ──", _headerStyle);
+            adsRotationOffset.x = DrawSliderRow("Rot X (Pitch):", adsRotationOffset.x, -15f, 15f, 0.10f, "°");
+            adsRotationOffset.y = DrawSliderRow("Rot Y (Yaw):", adsRotationOffset.y, -10f, 10f, 0.10f, "°");
+            adsRotationOffset.z = DrawSliderRow("Rot Z (Roll):", adsRotationOffset.z, -10f, 10f, 0.10f, "°");
+
+            GUILayout.Space(6);
+            Vector3 baseAdsPos = _hasCalibratedADS ? _calibratedAdsPosition : ((weaponData != null) ? weaponData.AdsLocalPosition : new Vector3(0f, -0.024f, 0.18f));
+            Vector3 baseAdsRot = _hasCalibratedADS ? _calibratedAdsRotation : ((weaponData != null) ? weaponData.AdsLocalRotation : new Vector3(-3.2f, 0f, 0f));
+            Vector3 finalPos = baseAdsPos + adsPositionOffset;
+            Vector3 finalRot = baseAdsRot + adsRotationOffset;
+
+            GUILayout.Label($"<b>Posição Final:</b> X={finalPos.x:F4} | Y={finalPos.y:F4} | Z={finalPos.z:F4}", _labelStyle);
+            GUILayout.Label($"<b>Rotação Final:</b> Pitch={finalRot.x:F2}° | Yaw={finalRot.y:F2}° | Roll={finalRot.z:F2}°", _labelStyle);
+
+            GUILayout.Space(8);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("📋 COPIAR VALORES C#", _buttonStyle, GUILayout.Height(26)))
+            {
+                string code = $"adsPos = new Vector3({finalPos.x:F4}f, {finalPos.y:F4}f, {finalPos.z:F4}f);\nadsRot = new Vector3({finalRot.x:F2}f, {finalRot.y:F2}f, {finalRot.z:F2}f);";
+                GUIUtility.systemCopyBuffer = code;
+                Debug.Log($"<color=#00FFAA>[Calibração ADS Copiada para Clipboard!]</color>\n{code}");
+            }
+
+            if (GUILayout.Button("🔄 RESETAR", _buttonStyle, GUILayout.Height(26), GUILayout.Width(85)))
+            {
+                adsPositionOffset = Vector3.zero;
+                adsRotationOffset = Vector3.zero;
+            }
+
+            if (GUILayout.Button("✕ FECHAR (F1)", _buttonStyle, GUILayout.Height(26), GUILayout.Width(100)))
+            {
+                ToggleDebugCalibrationUI(false);
+            }
+            GUILayout.EndHorizontal();
+
+            GUI.DragWindow(new Rect(0, 0, 10000, 24));
+        }
+
+        private float DrawSliderRow(string label, float value, float min, float max, float step, string unit)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(label, _labelStyle, GUILayout.Width(110));
+            if (GUILayout.Button("-", GUILayout.Width(22), GUILayout.Height(18)))
+            {
+                value = Mathf.Round((value - step) * 10000f) / 10000f;
+            }
+            value = GUILayout.HorizontalSlider(value, min, max, GUILayout.MinWidth(140));
+            if (GUILayout.Button("+", GUILayout.Width(22), GUILayout.Height(18)))
+            {
+                value = Mathf.Round((value + step) * 10000f) / 10000f;
+            }
+            GUILayout.Label($"{value:F4}{unit}", _valueStyle, GUILayout.Width(75));
+            GUILayout.EndHorizontal();
+            return value;
+        }
+
+        private void DrawScreenCenterCross()
+        {
+            if (_crossTexture == null)
+            {
+                _crossTexture = new Texture2D(1, 1);
+                _crossTexture.SetPixel(0, 0, new Color(0.2f, 1f, 0.4f, 0.85f));
+                _crossTexture.Apply();
+            }
+
+            float cx = Screen.width * 0.5f;
+            float cy = Screen.height * 0.5f;
+            float len = 8f;
+            float gap = 2f;
+
+            // Linhas horizontais (esquerda e direita)
+            GUI.DrawTexture(new Rect(cx - len - gap, cy - 0.5f, len, 1f), _crossTexture);
+            GUI.DrawTexture(new Rect(cx + gap, cy - 0.5f, len, 1f), _crossTexture);
+
+            // Linhas verticais (cima e baixo)
+            GUI.DrawTexture(new Rect(cx - 0.5f, cy - len - gap, 1f, len), _crossTexture);
+            GUI.DrawTexture(new Rect(cx - 0.5f, cy + gap, 1f, len), _crossTexture);
+
+            // Ponto central de 1 pixel
+            GUI.DrawTexture(new Rect(cx - 0.5f, cy - 0.5f, 1f, 1f), _crossTexture);
+        }
+
+        private void OnDestroy()
+        {
+            if (_guiBgTexture != null) Destroy(_guiBgTexture);
+            if (_crossTexture != null) Destroy(_crossTexture);
         }
     }
 }
